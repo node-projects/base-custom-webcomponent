@@ -10,7 +10,6 @@
     "tsc": "tsc"
   },
   "devDependencies": {
-    "typescript": "^3.9.3",
-    "typescript-lit-html-plugin": "^0.9.0"
+    "typescript": "^3.9.5"
   }
 }
