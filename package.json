@@ -11,5 +11,14 @@
   },
   "devDependencies": {
     "typescript": "^3.9.5"
-  }
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/node-projects/base-custom-webcomponent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/node-projects/base-custom-webcomponent/issues"
+  },
+  "homepage": "https://github.com/node-projects/base-custom-webcomponent#readme"
 }
