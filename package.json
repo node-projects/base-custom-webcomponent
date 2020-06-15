@@ -1,0 +1,20 @@
+{
+  "description": "Base Custom Webcomponent",
+  "name": "@node-projects/base-custom-webcomponent",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "author": "",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "@webcomponents/webcomponentsjs": "^2.4.3",
+    "construct-style-sheets-polyfill": "^2.3.5"
+  },
+  "devDependencies": {
+    "typescript": "^3.9.3",
+    "typescript-lit-html-plugin": "^0.9.0"
+  }
+}
