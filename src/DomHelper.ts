@@ -26,9 +26,23 @@ export class DomHelper {
     return null;
   }
 
-  static removeAllChildnodes(node: Element) {
+  static removeAllChildnodes(node: Node) {
     for (let c = node.firstChild; c !== null; c = node.firstChild) {
       node.removeChild(c);
     }
+  }
+
+  static nodeIndex(node: Node) {
+    let i = 0;
+    while ((node = node.previousSibling) != null)
+      i++;
+    return i;
+  }
+
+  static childIndex(node: Node) {
+    for (let i = 0; i < node.parentElement.children.length; i++)
+      if (node.parentElement.children[i] == node)
+        return i;
+    return -1;
   }
 }
