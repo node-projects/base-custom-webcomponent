@@ -9,7 +9,7 @@ export class LazyLoader {
       const el = document.createElement('script');
       el.src = file;
       el.onload = e => {
-        window[checkName] = true;
+        LazyLoader[checkName] = true;
         resolve(true);
       };
       el.onerror = err => {
