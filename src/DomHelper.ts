@@ -1,26 +1,28 @@
 export class DomHelper {
-  static * getAllChildNodes(element: ParentNode, includeShadowDom = false): IterableIterator<Node> {
-    if (element.children) {
-      for (const node of element.children) {
-        yield node;
-        if (includeShadowDom && node.shadowRoot != null) {
-          yield node.shadowRoot;
-          const childs = DomHelper.getAllChildNodes(node.shadowRoot, includeShadowDom);
+  static * getAllChildNodes(element: ParentNode, includeShadowDom = false, ignore?: Node[]): IterableIterator<Node> {
+    if (!ignore || ignore.indexOf(<Node><any>element) < 0) {
+      if (element.children) {
+        for (const node of element.children) {
+          yield node;
+          if (includeShadowDom && node.shadowRoot != null) {
+            yield node.shadowRoot;
+            const childs = DomHelper.getAllChildNodes(node.shadowRoot, includeShadowDom, ignore);
+            for (const cnode of childs) {
+              yield cnode;
+            }
+          }
+          const childs = DomHelper.getAllChildNodes(node, includeShadowDom, ignore);
           for (const cnode of childs) {
             yield cnode;
           }
         }
-        const childs = DomHelper.getAllChildNodes(node, includeShadowDom);
+      }
+      if (includeShadowDom && (<any>element).shadowRoot != null) {
+        yield (<any>element).shadowRoot;
+        const childs = DomHelper.getAllChildNodes((<any>element).shadowRoot, includeShadowDom);
         for (const cnode of childs) {
           yield cnode;
         }
-      }
-    }
-    if (includeShadowDom && (<any>element).shadowRoot != null) {
-      yield (<any>element).shadowRoot;
-      const childs = DomHelper.getAllChildNodes((<any>element).shadowRoot, includeShadowDom);
-      for (const cnode of childs) {
-        yield cnode;
       }
     }
     return null;
