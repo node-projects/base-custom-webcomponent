@@ -28,9 +28,17 @@ export class DomHelper {
     return null;
   }
 
-  static removeAllChildnodes(node: Node) {
-    for (let c = node.firstChild; c !== null; c = node.firstChild) {
-      node.removeChild(c);
+  static removeAllChildnodes(node: Node, className?: string) {
+    if (!className) {
+      for (let c = node.firstChild; c !== null; c = node.firstChild) {
+        node.removeChild(c);
+      }
+    } else {
+      const elements = (<HTMLElement>node).querySelectorAll('.' + className);
+      for (const e of elements) {
+        if (e.parentNode == node)
+          node.removeChild(e);
+      }
     }
   }
 
