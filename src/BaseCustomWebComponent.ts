@@ -19,7 +19,7 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
   return cssStyleSheet;
 };
 
-export class BaseCustomWebComponent extends HTMLElement {
+abstract class BaseCustomWebComponent extends HTMLElement {
   static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
   static readonly template: HTMLTemplateElement;
 
@@ -69,7 +69,7 @@ export class BaseCustomWebComponent extends HTMLElement {
     }
   }*/
 
-  private _rootDocumentFragment: DocumentFragment;
+  protected _rootDocumentFragment: DocumentFragment;
 
   constructor() {
     super();
@@ -93,9 +93,39 @@ export class BaseCustomWebComponent extends HTMLElement {
         this.shadowRoot.adoptedStyleSheets = [this.constructor.style];
     }
 
+
+  }
+}
+
+export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponent {
+  constructor() {
+    super()
     queueMicrotask(() => {
       if (this._rootDocumentFragment)
         this.shadowRoot.appendChild(this._rootDocumentFragment);
+      //@ts-ignore
+      if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
+        //@ts-ignore
+        this.constructor._oneTimeSetup = true;
+        //@ts-ignore
+        this.oneTimeSetup();
+      }
+      //@ts-ignore
+      if (this.ready)
+        //@ts-ignore
+        this.ready();
+    })
+  }
+}
+
+export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponent {
+  constructor() {
+    super()
+    if (this._rootDocumentFragment)
+      this.shadowRoot.appendChild(this._rootDocumentFragment);
+
+    queueMicrotask(() => {
+
       //@ts-ignore
       if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
         //@ts-ignore
