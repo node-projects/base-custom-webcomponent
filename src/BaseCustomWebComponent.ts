@@ -11,7 +11,6 @@ export const css = function (strings: TemplateStringsArray, ...values: any[]): C
   return cssStyleSheet;
 };
 
-/* @import could not be used in asyncStyles any more https://www.chromestatus.com/feature/4735925877735424 */
 export const cssAsync = async function (strings: TemplateStringsArray, ...values: any[]): Promise<CSSStyleSheet> {
   const cssStyleSheet = new CSSStyleSheet();
   //@ts-ignore
@@ -22,6 +21,8 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
 abstract class BaseCustomWebComponent extends HTMLElement {
   static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
   static readonly template: HTMLTemplateElement;
+
+  protected _bindings: (() => void)[];
 
   protected _getDomElement<T extends Element>(id: string): T {
     if (this.shadowRoot.children.length > 0)
@@ -34,6 +35,83 @@ abstract class BaseCustomWebComponent extends HTMLElement {
       return <T[]>(<any>this.shadowRoot.querySelectorAll(selector));
     return <T[]>(<any>this._rootDocumentFragment.querySelectorAll(selector));
   }
+
+  protected _assignOnDashEvents(node?: Node) {
+    if (!node)
+      node = this.shadowRoot;
+    if (node instanceof Element) {
+      for (let a of node.attributes) {
+        if (a.name.startsWith('on-')) {
+          node.removeAttribute(a.name);
+          node['on' + a.name.substring(3)] = this[a.value].bind(this);
+        }
+      }
+    }
+    for (let n of node.childNodes) {
+      this._assignOnDashEvents(n);
+    }
+  }
+
+  protected _bindingsParse(context?: object, node?: Node) {
+    if (!this._bindings)
+      this._bindings = [];
+    if (!context)
+      context = this;
+    if (!node)
+      node = this.shadowRoot;
+    if (node instanceof Element) {
+      for (let a of node.attributes) {
+        if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
+          let value = a.value.substring(2, a.value.length - 2);
+          let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+          this._bindings.push(() => node[camelCased] = eval('this.' + value));
+          this._bindings[this._bindings.length - 1]();
+        } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
+          let value = a.value.substring(2, a.value.length - 2);
+          let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+          this._bindings.push(() => node[camelCased] = eval('this.' + value));
+          this._bindings[this._bindings.length - 1]();
+          switch(camelCased) {
+            case 'value': {
+              (<HTMLInputElement>node).onchange = (e) => this._bindingsSetValue(this, value,  (<HTMLInputElement>node).value);
+            }
+          }
+        }
+      }
+      if (node.innerHTML.startsWith('{{') && node.innerHTML.endsWith('}}')) {
+        let value = node.innerHTML.substring(2, node.innerHTML.length - 2);
+        this._bindings.push(() => (<Element>node).innerHTML = eval('this.' + value));
+        this._bindings[this._bindings.length - 1]();
+      }
+    }
+    for (let n of node.childNodes) {
+      this._bindingsParse(context, n);
+    }
+  }
+
+  protected _bindingsRefresh() {
+    this._bindings.forEach(x => x());
+  }
+
+  protected _bindingsSetValue(obj, path: string, value) {
+    if (path === undefined || path === null) {
+        return;
+    }
+
+    const pathParts = path.split('.');
+    for (let i = 0; i < pathParts.length - 1; i++) {
+        if (obj != null) {
+            let newObj = obj[pathParts[i]];
+            if (newObj == null) {
+                newObj = {};
+                obj[pathParts[i]] = newObj;
+            }
+            obj = newObj;
+        }
+    }
+
+    obj[pathParts[pathParts.length - 1]] = value;
+}
 
   //@ts-ignore
   private static _propertiesDictionary: Map<string, string>;
