@@ -1,7 +1,7 @@
 {
   "description": "Base Custom Webcomponent",
   "name": "@node-projects/base-custom-webcomponent",
-  "version": "0.0.30",
+  "version": "0.0.40",
   "type": "module",
   "main": "./dist/index.js",
   "author": "",

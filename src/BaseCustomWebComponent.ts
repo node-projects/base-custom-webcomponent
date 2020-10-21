@@ -18,6 +18,21 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
     return cssStyleSheet;
 };
 
+// decorators
+export function property(type?: any) {
+    return function (target: Object, propertyKey: PropertyKey) {
+        //@ts-ignore
+        if (!target.constructor.properties) {
+            //@ts-ignore
+            target.constructor.properties = {};
+        }
+        //@ts-ignore
+        target.constructor.properties[propertyKey] = type ? type : String;
+    }
+}
+
+const internalPropertyPrefix = '___';
+
 abstract class BaseCustomWebComponent extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
     static readonly template: HTMLTemplateElement;
@@ -204,7 +219,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
     //@ts-ignore
     private static _propertiesDictionary: Map<string, string>;
-    protected _parseAttributesToProperties() {
+    protected _parseAttributesToProperties(createPropertyObservers?: boolean) {
         //@ts-ignore
         if (!this.constructor._propertiesDictionary) {
             //@ts-ignore
@@ -213,6 +228,31 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             for (let i in this.constructor.properties) {
                 //@ts-ignore
                 this.constructor._propertiesDictionary.set(i.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`), [i, this.constructor.properties[i]]);
+                if (createPropertyObservers) {
+                    let descriptor = Reflect.getOwnPropertyDescriptor(this, i);
+                    if (!descriptor) {
+                        descriptor = { configurable: true, enumerable: true };
+                        descriptor.get = () => this[internalPropertyPrefix + i];
+                        descriptor.set = (v) => {
+                            this[internalPropertyPrefix + i] = v;
+                            this._bindingsRefresh();
+                        };
+                        Reflect.defineProperty(this, i, descriptor)
+                    } else {
+                        if (descriptor.hasOwnProperty('value') && descriptor.writable && descriptor.configurable) {
+                            this[internalPropertyPrefix + i] = descriptor.value;
+                            delete descriptor.value;
+                            delete descriptor.writable;
+                            descriptor.get = () => this[internalPropertyPrefix + i];
+                            descriptor.set = (v) => {
+                                this[internalPropertyPrefix + i] = v;
+                                this._bindingsRefresh();
+                            };
+                            Reflect.defineProperty(this, i, descriptor)
+                        }
+                    }
+
+                }
             }
         }
         for (const a of this.attributes) {
