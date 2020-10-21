@@ -107,18 +107,24 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                         let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
                         node.appendChild(tn);
                     }
-                    let sp = document.createElement('span');
+                    let workingNode = node;
+                    if ( m.index > 0 || m[0].length != text.length) {
+                      workingNode = document.createElement('span');
+                    }
+
                     let value = m[0].substr(2, m[0].length - 4);
                     this._bindings.push(() => {
                         try {
-                            sp.innerHTML = eval(value);
+                          workingNode.innerHTML = eval(value);
                         } catch (error) {
                             console.warn(error, node, value);
                         }
                     });
 
                     this._bindings[this._bindings.length - 1]();
-                    node.appendChild(sp);
+                    if (node != workingNode){
+                      node.appendChild(workingNode);
+                    }
                     lastindex = m.index + m[0].length;
                 }
                 if (lastindex > 0 && text.length - lastindex > 0) {
@@ -129,7 +135,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
         }
         for (let n of node.childNodes) {
+            if (!( n instanceof HTMLTemplateElement)){
             this._bindingsParse(context, n);
+            }
         }
     }
 
