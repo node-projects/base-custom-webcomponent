@@ -88,11 +88,11 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             this._bindings[this._bindings.length - 1]();
             switch (camelCased) {
               case 'value': {
-                (<HTMLInputElement>node).onchange = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).value);
+                (<HTMLInputElement>node).oninput = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).value);
                 break;
               }
               case 'valueAsNumber': {
-                (<HTMLInputElement>node).onchange = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).valueAsNumber);
+                (<HTMLInputElement>node).oninput = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).valueAsNumber);
               }
             }
           }
