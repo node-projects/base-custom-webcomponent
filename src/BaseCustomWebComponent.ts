@@ -55,25 +55,43 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         }
     }
 
-    protected _bindingsParse(context?: object, node?: Node) {
+    /**
+     * Parses Polymer like Bindings
+     * 
+     * use [[texpression]] for one way bindings
+     * 
+     * use {{this.property:change;paste}} for two way wich binds to events 'change 'and 'paste'
+     * 
+     * use @eventname=[[this.eventHandler]] to bind a handler to a event
+     * 
+     * use css:cssPropertyName=[[expression]] to bind to a css property
+     * 
+     * use class:className=[[boolExpression]] to set/remove a css class
+     * 
+     * sub <template></template> elements are not bound, so elemnts like <iron-list> of polymer also work
+     * 
+     */
+    protected _bindingsParse(node?: Node) {
         if (!this._bindings)
             this._bindings = [];
-        if (!context)
-            context = this;
         if (!node)
             node = this.shadowRoot;
         if (node instanceof Element) {
             for (let a of node.attributes) {
-                if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                    let value = a.value.substring(2, a.value.length - 2);
+                    let camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value));
+                    this._bindings[this._bindings.length - 1]();
+                } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                    let value = a.value.substring(2, a.value.length - 2);
+                    let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value));
+                    this._bindings[this._bindings.length - 1]();
+                } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => {
-                        try {
-                            node[camelCased] = eval(value);
-                        } catch (error) {
-                            console.warn(error, node, value);
-                        }
-                    });
+                    this._bindings.push(() => this._bindingSetNodeValue(node, camelCased, value));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
                     let attributeValues = a.value.substring(2, a.value.length - 2).split('::');
@@ -82,16 +100,11 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     if (attributeValues.length > 1 && attributeValues[1])
                         event = attributeValues[1];
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => {
-                        try {
-                            node[camelCased] = eval(value);
-                        } catch (error) {
-                            console.warn(error, node, value);
-                        }
-                    });
+                    this._bindings.push(() => this._bindingSetNodeValue(node, camelCased, value));
                     this._bindings[this._bindings.length - 1]();
-                    if (event)
-                        node.addEventListener(event, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased]));
+                    if (event) {
+                        event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
+                    }
                 }
             }
 
@@ -108,22 +121,16 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                         node.appendChild(tn);
                     }
                     let workingNode = node;
-                    if ( m.index > 0 || m[0].length != text.length) {
-                      workingNode = document.createElement('span');
+                    if (m.index > 0 || m[0].length != text.length) {
+                        workingNode = document.createElement('span');
                     }
 
                     let value = m[0].substr(2, m[0].length - 4);
-                    this._bindings.push(() => {
-                        try {
-                          workingNode.innerHTML = eval(value);
-                        } catch (error) {
-                            console.warn(error, node, value);
-                        }
-                    });
+                    this._bindings.push(() => this._bindingSetNodeValue(workingNode, 'innerHTML', value));
 
                     this._bindings[this._bindings.length - 1]();
-                    if (node != workingNode){
-                      node.appendChild(workingNode);
+                    if (node != workingNode) {
+                        node.appendChild(workingNode);
                     }
                     lastindex = m.index + m[0].length;
                 }
@@ -132,12 +139,39 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     node.appendChild(tn);
                 }
             }
-
         }
         for (let n of node.childNodes) {
-            if (!( n instanceof HTMLTemplateElement)){
-            this._bindingsParse(context, n);
+            if (!(n instanceof HTMLTemplateElement)) {
+                this._bindingsParse(n);
             }
+        }
+    }
+
+    private _bindingSetNodeValue(node: Node, property: string, expression: string) {
+        try {
+            node[property] = eval(expression);
+        } catch (error) {
+            console.warn((<Error>error).message, 'Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
+        }
+    }
+
+    private _bindingSetElementCssValue(node: HTMLElement | SVGElement, property: string, expression: string) {
+        try {
+            node.style[property] = eval(expression);
+        } catch (error) {
+            console.warn((<Error>error).message, 'Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
+        }
+    }
+
+    private _bindingSetElementClass(node: HTMLElement | SVGElement, classname: string, expression: string) {
+        try {
+            let value = eval(expression);
+            if (value)
+                node.classList.add(classname);
+            else
+                node.classList.remove(classname);
+        } catch (error) {
+            console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', node);
         }
     }
 
