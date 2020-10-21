@@ -6,7 +6,7 @@ export const html = function (strings: TemplateStringsArray, ...values: any[]): 
 
 export const css = function (strings: TemplateStringsArray, ...values: any[]): CSSStyleSheet {
   const cssStyleSheet = new CSSStyleSheet();
-    //@ts-ignore
+  //@ts-ignore
   cssStyleSheet.replaceSync(strings.raw[0]);
   return cssStyleSheet;
 };
@@ -24,7 +24,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
   protected _bindings: (() => void)[];
 
-    //@ts-ignore
+  //@ts-ignore
   private static _bindingRegex = /\[\[.*?\]\]/g;
 
   protected _getDomElement<T extends Element>(id: string): T {
@@ -67,76 +67,71 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
           let value = a.value.substring(2, a.value.length - 2);
           let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-          this._bindings.push(() =>  {
+          this._bindings.push(() => {
             try {
               node[camelCased] = eval(value);
-            } catch ( error ) {
+            } catch (error) {
               console.warn(error, node, value);
             }
           });
           this._bindings[this._bindings.length - 1]();
-          } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
-            let value = a.value.substring(2, a.value.length - 2);
-            let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-            this._bindings.push(() =>  {
-              try {
-                node[camelCased] = eval(value);
-              } catch ( error ) {
-                console.warn(error, node, value);
-              }
-            });
-            this._bindings[this._bindings.length - 1]();
-            switch (camelCased) {
-              case 'value': {
-                (<HTMLInputElement>node).oninput = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).value);
-                break;
-              }
-              case 'valueAsNumber': {
-                (<HTMLInputElement>node).oninput = (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node).valueAsNumber);
-              }
+        } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
+          let attributeValues = a.value.substring(2, a.value.length - 2).split('::');
+          let value = attributeValues[0];
+          let event = 'input';
+          if (attributeValues.length > 1 && attributeValues[1])
+            event = attributeValues[1];
+          let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+          this._bindings.push(() => {
+            try {
+              node[camelCased] = eval(value);
+            } catch (error) {
+              console.warn(error, node, value);
             }
-          }
+          });
+          this._bindings[this._bindings.length - 1]();
+          if (event)
+            node.addEventListener(event, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased]));
         }
-        
-        if (!node.children.length && node.innerHTML)
-        {
-          let matches = node.innerHTML.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
-          let lastindex = 0;
-          let text = node.innerHTML;
-          for(let m of matches)
-          {
-            if (lastindex == 0) {
-              node.innerHTML = '';
-            }
-            if (m.index - lastindex > 0) {
-              let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
-              node.appendChild(tn);
-            }
-            let sp = document.createElement('span'); 
-            let value = m[0].substr(2, m[0].length-4);         
-            this._bindings.push(() => {
-              try {
-                sp.innerHTML = eval(value);
-              } catch ( error ) {
-                console.warn(error, node, value);
-              }
-            });
-            
-            this._bindings[this._bindings.length - 1]();
-            node.appendChild(sp);
-            lastindex = m.index + m[0].length;
+      }
+
+      if (!node.children.length && node.innerHTML) {
+        let matches = node.innerHTML.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
+        let lastindex = 0;
+        let text = node.innerHTML;
+        for (let m of matches) {
+          if (lastindex == 0) {
+            node.innerHTML = '';
           }
-          if (lastindex > 0 && text.length - lastindex > 0) {
-            let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
+          if (m.index - lastindex > 0) {
+            let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
             node.appendChild(tn);
           }
-        }
+          let sp = document.createElement('span');
+          let value = m[0].substr(2, m[0].length - 4);
+          this._bindings.push(() => {
+            try {
+              sp.innerHTML = eval(value);
+            } catch (error) {
+              console.warn(error, node, value);
+            }
+          });
 
+          this._bindings[this._bindings.length - 1]();
+          node.appendChild(sp);
+          lastindex = m.index + m[0].length;
+        }
+        if (lastindex > 0 && text.length - lastindex > 0) {
+          let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
+          node.appendChild(tn);
+        }
       }
-      for (let n of node.childNodes) {
-        this._bindingsParse(context, n);
-      }
+
     }
+    for (let n of node.childNodes) {
+      this._bindingsParse(context, n);
+    }
+  }
 
   protected _bindingsRefresh() {
     this._bindings.forEach(x => x());
@@ -147,7 +142,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
       return;
     }
 
-    if (path.startsWith('this.')){
+    if (path.startsWith('this.')) {
       path = path.substr(5);
     }
     const pathParts = path.split('.');
@@ -206,9 +201,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
     this.attachShadow({ mode: 'open' });
 
-    if (template){
-        //@ts-ignore
-        this._rootDocumentFragment = template.content.cloneNode(true);
+    if (template) {
+      //@ts-ignore
+      this._rootDocumentFragment = template.content.cloneNode(true);
     }
     //@ts-ignore
     else if (this.constructor.template) {
@@ -225,8 +220,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         //@ts-ignore
         this.shadowRoot.adoptedStyleSheets = [style];
       //@ts-ignore
-    } else  if (this.constructor.style) {
-    
+    } else if (this.constructor.style) {
+
       //@ts-ignore
       if (this.constructor.style instanceof Promise)
         //@ts-ignore
