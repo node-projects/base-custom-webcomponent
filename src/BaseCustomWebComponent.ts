@@ -164,7 +164,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
     private _bindingSetNodeValue(node: Node, property: string, expression: string) {
         try {
-            node[property] = eval(expression);
+            const value = eval(expression);
+            if (node[property] !== value)
+                node[property] = value;
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
         }
@@ -172,7 +174,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
 
     private _bindingSetElementCssValue(node: HTMLElement | SVGElement, property: string, expression: string) {
         try {
-            node.style[property] = eval(expression);
+            const value = eval(expression);
+            if (node.style[property] !== value)
+                node.style[property] = value;
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
         }
@@ -181,10 +185,14 @@ abstract class BaseCustomWebComponent extends HTMLElement {
     private _bindingSetElementClass(node: HTMLElement | SVGElement, classname: string, expression: string) {
         try {
             let value = eval(expression);
-            if (value)
-                node.classList.add(classname);
-            else
-                node.classList.remove(classname);
+            if (value) {
+                if (!node.classList.contains(classname))
+                    node.classList.add(classname);
+            }
+            else {
+                if (node.classList.contains(classname))
+                    node.classList.remove(classname);
+            }
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', node);
         }
