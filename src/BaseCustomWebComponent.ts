@@ -17,6 +17,13 @@ export const css = function (strings: TemplateStringsArray, ...values: any[]): C
     return cssStyleSheet;
 };
 
+export const cssFromString = function (value: string): CSSStyleSheet {
+    const cssStyleSheet = new CSSStyleSheet();
+    //@ts-ignore
+    cssStyleSheet.replaceSync(value);
+    return cssStyleSheet;
+};
+
 export const cssAsync = async function (strings: TemplateStringsArray, ...values: any[]): Promise<CSSStyleSheet> {
     const cssStyleSheet = new CSSStyleSheet();
     //@ts-ignore
