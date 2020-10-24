@@ -1,3 +1,4 @@
+import { DomHelper } from './DomHelper';
 export const html = function (strings: TemplateStringsArray, ...values: any[]): HTMLTemplateElement {
     const template = document.createElement('template');
     template.innerHTML = strings.raw[0];
@@ -53,7 +54,9 @@ export function customElement(tagname: string) {
     }
 }
 
-const internalPropertyPrefix = '___';
+const internalPrefix = '___';
+
+type repeatBindingItem = { name: string, item: any }
 
 abstract class BaseCustomWebComponent extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
@@ -95,7 +98,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
     /**
      * Parses Polymer like Bindings
      * 
-     * use [[texpression]] for one way bindings
+     * use [[expression]] for one way bindings
      * 
      * use {{this.property:change;paste}} for two way wich binds to events 'change 'and 'paste'
      * 
@@ -107,28 +110,41 @@ abstract class BaseCustomWebComponent extends HTMLElement {
      * 
      * sub <template></template> elements are not bound, so elemnts like <iron-list> of polymer also work
      * 
+     * use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeate it for every instance of the enumarable
+     * ==> this could also be nested
+     * 
      */
-    protected _bindingsParse(node?: Node) {
+    protected _bindingsParse(node?: Node, removeAttributes = false) {
+        this._bindingsInternalParse(node, null, removeAttributes);
+    }
+
+    private _bindingsInternalParse(node: Node, repeatBindingItems: repeatBindingItem[], removeAttributes) {
         if (!this._bindings)
             this._bindings = [];
         if (!node)
             node = this.shadowRoot;
         if (node instanceof Element) {
-            for (let a of node.attributes) {
+            let attributes = Array.from(node.attributes);
+            for (let a of attributes) {
                 if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value));
+                    this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value));
+                    this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
+                    this._bindings[this._bindings.length - 1]();
+                } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                    let value = a.value.substring(2, a.value.length - 2);
+                    let camelCased = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetNodeValue(node, camelCased, value));
+                    this._bindings.push(() => this._bindingSetNodeValue(node, a, camelCased, value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
                     let attributeValues = a.value.substring(2, a.value.length - 2).split('::');
@@ -137,7 +153,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     if (attributeValues.length > 1 && attributeValues[1])
                         event = attributeValues[1];
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetNodeValue(node, camelCased, value));
+                    this._bindings.push(() => this._bindingSetNodeValue(node, a, camelCased, value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1]();
                     if (event) {
                         event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
@@ -145,7 +161,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                 }
             }
 
-            if (!node.children.length && node.innerHTML) {
+            if (!node.children.length && !(node instanceof HTMLTemplateElement) && node.innerHTML) {
                 let matches = node.innerHTML.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
                 let lastindex = 0;
                 let text = node.innerHTML;
@@ -163,7 +179,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     }
 
                     let value = m[0].substr(2, m[0].length - 4);
-                    this._bindings.push(() => this._bindingSetNodeValue(workingNode, 'innerHTML', value));
+                    this._bindings.push(() => this._bindingSetNodeValue(workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes));
 
                     this._bindings[this._bindings.length - 1]();
                     if (node != workingNode) {
@@ -177,26 +193,69 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                 }
             }
         }
-        for (let n of node.childNodes) {
-            if (!(n instanceof HTMLTemplateElement)) {
-                this._bindingsParse(n);
+
+        if (!(node instanceof HTMLTemplateElement)) {
+            let children = Array.from(node.childNodes);
+            for (let n of children) {
+                this._bindingsInternalParse(n, repeatBindingItems, removeAttributes);
             }
         }
     }
 
-    private _bindingSetNodeValue(node: Node, property: string, expression: string) {
+    private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[]) {
+        if (repeatBindingItems) {
+            let n = 0;
+            for (let b of repeatBindingItems) {
+                expression = 'let ' + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
+                n++
+            }
+            //@ts-ignore
+            var ___repeatBindingItems = repeatBindingItems;
+            let value = eval(expression);
+            return value;
+        }
+        let value = eval(expression);
+        return value;
+    }
+
+    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, expression: string, repeatBindingItems: repeatBindingItem[]) {
         try {
-            const value = eval(expression);
-            if (node[property] !== value)
+            const values = this._bindingRunEval(expression, repeatBindingItems);
+            if (values) {
+                for (let c = node.parentElement.lastChild; c !== null && c !== node; c = node.parentElement.lastChild) {
+                    node.parentElement.removeChild(c);
+                }
+                for (let e of values) {
+                    let intRepeatBindingItems: repeatBindingItem[] = [];
+                    if (repeatBindingItems)
+                        intRepeatBindingItems = repeatBindingItems.slice();
+                    intRepeatBindingItems.push({ name: bindingProperty, item: e });
+                    let nd = node.content.cloneNode(true);
+                    this._bindingsInternalParse(nd, intRepeatBindingItems, true);
+                    node.parentElement.appendChild(nd);
+                }
+            }
+        } catch (error) {
+            console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
+        }
+    }
+
+    private _bindingSetNodeValue(node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean) {
+        try {
+            const value = this._bindingRunEval(expression, repeatBindingItems);
+            if (node[property] !== value) {
+                if (removeAttributes && attribute)
+                    (<Element>node).removeAttribute(attribute.name);
                 node[property] = value;
+            }
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
         }
     }
 
-    private _bindingSetElementCssValue(node: HTMLElement | SVGElement, property: string, expression: string) {
+    private _bindingSetElementCssValue(node: HTMLElement | SVGElement, property: string, expression: string, repeatBindingItems: repeatBindingItem[]) {
         try {
-            const value = eval(expression);
+            const value = this._bindingRunEval(expression, repeatBindingItems);
             if (node.style[property] !== value)
                 node.style[property] = value;
         } catch (error) {
@@ -204,9 +263,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         }
     }
 
-    private _bindingSetElementClass(node: HTMLElement | SVGElement, classname: string, expression: string) {
+    private _bindingSetElementClass(node: HTMLElement | SVGElement, classname: string, expression: string, repeatBindingItems: repeatBindingItem[]) {
         try {
-            let value = eval(expression);
+            const value = this._bindingRunEval(expression, repeatBindingItems);
             if (value) {
                 if (!node.classList.contains(classname))
                     node.classList.add(classname);
@@ -253,20 +312,20 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             let descriptor = Reflect.getOwnPropertyDescriptor(this, i);
             if (!descriptor) {
                 descriptor = { configurable: true, enumerable: true };
-                descriptor.get = () => this[internalPropertyPrefix + i];
+                descriptor.get = () => this[internalPrefix + i];
                 descriptor.set = (v) => {
-                    this[internalPropertyPrefix + i] = v;
+                    this[internalPrefix + i] = v;
                     this._bindingsRefresh();
                 };
                 Reflect.defineProperty(this, i, descriptor)
             } else {
                 if (descriptor.hasOwnProperty('value') && descriptor.writable && descriptor.configurable) {
-                    this[internalPropertyPrefix + i] = descriptor.value;
+                    this[internalPrefix + i] = descriptor.value;
                     delete descriptor.value;
                     delete descriptor.writable;
-                    descriptor.get = () => this[internalPropertyPrefix + i];
+                    descriptor.get = () => this[internalPrefix + i];
                     descriptor.set = (v) => {
-                        this[internalPropertyPrefix + i] = v;
+                        this[internalPrefix + i] = v;
                         this._bindingsRefresh();
                     };
                     Reflect.defineProperty(this, i, descriptor)
