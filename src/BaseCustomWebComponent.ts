@@ -1,4 +1,3 @@
-import { DomHelper } from './DomHelper';
 export const html = function (strings: TemplateStringsArray, ...values: any[]): HTMLTemplateElement {
     const template = document.createElement('template');
     template.innerHTML = strings.raw[0];
@@ -139,7 +138,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems));
+                    let elementsCache: Node[] = [];
+                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
@@ -218,12 +218,12 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         return value;
     }
 
-    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, expression: string, repeatBindingItems: repeatBindingItem[]) {
+    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[]) {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems);
             if (values) {
-                for (let c = node.parentElement.lastChild; c !== null && c !== node; c = node.parentElement.lastChild) {
-                    node.parentElement.removeChild(c);
+                for (let c of elementsCache) { // todo bindings of childs need to be killed
+                    c.parentElement.removeChild(c); 
                 }
                 for (let e of values) {
                     let intRepeatBindingItems: repeatBindingItem[] = [];
@@ -231,6 +231,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                         intRepeatBindingItems = repeatBindingItems.slice();
                     intRepeatBindingItems.push({ name: bindingProperty, item: e });
                     let nd = node.content.cloneNode(true);
+                    elementsCache.push(nd);
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true);
                     node.parentElement.appendChild(nd);
                 }
@@ -331,7 +332,6 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     Reflect.defineProperty(this, i, descriptor)
                 }
             }
-
         }
     }
 

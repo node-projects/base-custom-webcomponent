@@ -5,17 +5,35 @@
 A simple base class for custom webcomponents.
 Also some often needed helper methods.
 
-## Features
+## Dependecies
 
- - CSS Reusage vie AdoptedStyleSheets
- - Simple Binding Framework
+If you use Firefox od Safari you need the constructible stylesheets polyfill
+https://github.com/calebdwilliams/construct-style-sheets
+
+## Features
 
 All the features are not enabled by default for perfomance reasons.
 
-this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
+ - this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
+ - this._assignEvents(); ==> parses @event bindings to callbacks in class
+ - this._bindingsParse(); ==> parses and enables bindings
+ - this._createObservableProperties(); ==> creates getters/setters for each property and calls this._bingsRefresh() in each setter;
 
-this._bindingsParse(); ==> parses and enables bindings
-this._createObservableProperties(); ==> creates getters/setters for each property and calls this._bingsRefresh() in each setter;
+## Bindings
+
+The Bindings are heavily inspired by polymer
+
+use [[expression]] for one way bindings
+
+use {{this.property:change;paste}} for two wa bindings wich listens to events 'change 'and 'paste'
+
+css:cssPropertyName=[[expression]] to bind to a css property
+
+class:className=[[boolExpression]] to set/remove a css class
+
+sub <template></template> elements are not bound, so elemnts like <iron-list> of polymer also work
+
+use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeate it for every instance of the enumerable
 
 ## Developing
 
