@@ -45,7 +45,7 @@ export function property(type?: any) {
 }
 
 export function customElement(tagname: string) {
-    return function (class_: (new (...par) => BaseCustomWebComponent)) {
+    return function (class_: (new (...par) => BaseCustomWebComponentNoAttachedTemplate)) {
         //@ts-ignore
         class_.is = tagname;
 
@@ -57,11 +57,11 @@ const internalPrefix = '___';
 
 type repeatBindingItem = { name: string, item: any }
 
-abstract class BaseCustomWebComponent extends HTMLElement {
+export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
     static readonly template: HTMLTemplateElement;
 
-    protected _bindings: (() => void)[];
+    protected _bindings: ((firstRun?: boolean) => void)[];
 
     //@ts-ignore
     private static _bindingRegex = /\[\[.*?\]\]/g;
@@ -121,7 +121,7 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         if (!this._bindings)
             this._bindings = [];
         if (!node)
-            node = this.shadowRoot;
+            node = this.shadowRoot.children.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
         if (node instanceof Element) {
             let attributes = Array.from(node.attributes);
             for (let a of attributes) {
@@ -148,8 +148,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetNodeValue(node, a, camelCased, value, repeatBindingItems, removeAttributes));
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes));
+                    this._bindings[this._bindings.length - 1](true);
                 } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
                     let attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                     let value = attributeValues[0];
@@ -157,8 +157,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     if (attributeValues.length > 1 && attributeValues[1])
                         event = attributeValues[1];
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetNodeValue(node, a, camelCased, value, repeatBindingItems, removeAttributes));
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes));
+                    this._bindings[this._bindings.length - 1](true);
                     if (event) {
                         event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
                     }
@@ -183,9 +183,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     }
 
                     let value = m[0].substr(2, m[0].length - 4);
-                    this._bindings.push(() => this._bindingSetNodeValue(workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes));
-
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes));
+                    this._bindings[this._bindings.length - 1](true);
                     if (node != workingNode) {
                         node.appendChild(workingNode);
                     }
@@ -251,10 +250,10 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         }
     }
 
-    private _bindingSetNodeValue(node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean) {
+    private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean) {
         try {
             const value = this._bindingRunEval(expression, repeatBindingItems);
-            if (node[property] !== value) {
+            if (firstRun || node[property] !== value) {
                 if (removeAttributes && attribute)
                     (<Element>node).removeAttribute(attribute.name);
                 node[property] = value;
@@ -291,7 +290,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
     }
 
     protected _bindingsRefresh() {
-        this._bindings.forEach(x => x());
+        if (this._bindings)
+            this._bindings.forEach(x => x());
     }
 
     protected _bindingsSetValue(obj, path: string, value) {
@@ -415,12 +415,10 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                 //@ts-ignore
                 this.shadowRoot.adoptedStyleSheets = [this.constructor.style];
         }
-
-
     }
 }
 
-export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponent {
+export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super(template, style)
         queueMicrotask(() => {
@@ -441,7 +439,7 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponent {
     }
 }
 
-export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponent {
+export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super(template, style)
         if (this._rootDocumentFragment)
