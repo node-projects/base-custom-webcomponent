@@ -83,8 +83,8 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             node = this.shadowRoot;
         if (node instanceof Element) {
             for (let a of node.attributes) {
-                if (a.name.startsWith('@')) {
-                    node.removeAttribute(a.name);
+                if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
+                    //node.removeAttribute(a.name);
                     node.addEventListener(a.name.substr(1), this[a.value].bind(this));
                 }
             }
@@ -141,6 +141,10 @@ abstract class BaseCustomWebComponent extends HTMLElement {
                     let elementsCache: Node[] = [];
                     this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
+                } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
+                    let value = a.value.substring(2, a.value.length - 2);
+                    let camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2);
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -162,9 +166,9 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             }
 
             if (!node.children.length && !(node instanceof HTMLTemplateElement) && node.innerHTML) {
-                let matches = node.innerHTML.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
+                let text = node.innerHTML.trim();
+                let matches = text.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
                 let lastindex = 0;
-                let text = node.innerHTML;
                 for (let m of matches) {
                     if (lastindex == 0) {
                         node.innerHTML = '';
@@ -202,15 +206,20 @@ abstract class BaseCustomWebComponent extends HTMLElement {
         }
     }
 
-    private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[]) {
+    private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event?: Event) {
         if (repeatBindingItems) {
             let n = 0;
             for (let b of repeatBindingItems) {
                 expression = 'let ' + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
-                n++
+                n++;
+            }
+            if (event) {
+                expression = 'let event = ___event;' + expression;
             }
             //@ts-ignore
             var ___repeatBindingItems = repeatBindingItems;
+            //@ts-ignore
+            var ___event = event;
             let value = eval(expression);
             return value;
         }
@@ -223,15 +232,16 @@ abstract class BaseCustomWebComponent extends HTMLElement {
             const values = this._bindingRunEval(expression, repeatBindingItems);
             if (values) {
                 for (let c of elementsCache) { // todo bindings of childs need to be killed
-                    c.parentElement.removeChild(c); 
+                    if (c.parentElement)
+                        c.parentElement.removeChild(c);
                 }
                 for (let e of values) {
                     let intRepeatBindingItems: repeatBindingItem[] = [];
                     if (repeatBindingItems)
                         intRepeatBindingItems = repeatBindingItems.slice();
                     intRepeatBindingItems.push({ name: bindingProperty, item: e });
-                    let nd = node.content.cloneNode(true);
-                    elementsCache.push(nd);
+                    let nd = <DocumentFragment>node.content.cloneNode(true);
+                    elementsCache.push(...nd.children);
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true);
                     node.parentElement.appendChild(nd);
                 }
