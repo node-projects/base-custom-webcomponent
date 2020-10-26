@@ -2,17 +2,24 @@
 
 ## Description
 
-A simple base class for custom webcomponents.
-Also some often needed helper methods.
+The base-custom-webcomponent is a simple base class for the use of webcomponents in typescript. It wraps the needed basic functionality and also allows you to optionally use some advanced technics like
+- set attribute into property 
+- two-way binding
 
-## Dependecies
+## Basic Feature
+The base class does:
+- registers the html tag
+- creates the shadow dom
+- imports the css and html into the shadow dom
+- gives access to the dom elements with helping functions
+- informs about startup 
+  - oneTimeSetup()
+  - ready()
 
-If you use Firefox od Safari you need the constructible stylesheets polyfill
-https://github.com/calebdwilliams/construct-style-sheets
 
-## Features
+## Advanced Features
 
-All the features are not enabled by default for perfomance reasons.
+All the features are not enabled by default for performance reasons but you can call these methods to enable them. 
 
  - this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
  - this._assignEvents(); ==> parses @event bindings to callbacks in class
@@ -25,15 +32,15 @@ The Bindings are heavily inspired by polymer
 
 use [[expression]] for one way bindings
 
-use {{this.property:change;paste}} for two wa bindings wich listens to events 'change 'and 'paste'
+use {{this.property:change;paste}} for two wa bindings which listens to events 'change 'and 'paste'
 
 css:cssPropertyName=[[expression]] to bind to a css property
 
 class:className=[[boolExpression]] to set/remove a css class
 
-sub <template></template> elements are not bound, so elemnts like <iron-list> of polymer also work
+sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
-use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeate it for every instance of the enumerable
+use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable
 
 ## Developing
 
@@ -102,3 +109,5 @@ export class TestElement extends BaseCustomWebComponentConstructorAppend {
 }
 
 ```
+
+
