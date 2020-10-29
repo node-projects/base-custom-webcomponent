@@ -85,7 +85,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             for (let a of node.attributes) {
                 if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
                     //node.removeAttribute(a.name);
-                    node.addEventListener(a.name.substr(1), this[a.value].bind(this));
+                    try {
+                        node.addEventListener(a.name.substr(1), this[a.value].bind(this));
+                    } catch (error) {
+                        console.warn((<Error>error).message, 'Failed to attach event "', a, node);
+                    }
                 }
             }
         }
@@ -126,27 +130,27 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             let attributes = Array.from(node.attributes);
             for (let a of attributes) {
                 if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2);
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
                     let camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2);
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
                     let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2);
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
                     let camelCased = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     let elementsCache: Node[] = [];
                     this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
-                    let value = a.value.substring(2, a.value.length - 2);
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
                     let camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2);
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1](true);
@@ -182,7 +186,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         workingNode = document.createElement('span');
                     }
 
-                    let value = m[0].substr(2, m[0].length - 4);
+                    let value = m[0].substr(2, m[0].length - 4).replaceAll('&amp;','&');
                     this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1](true);
                     if (node != workingNode) {
