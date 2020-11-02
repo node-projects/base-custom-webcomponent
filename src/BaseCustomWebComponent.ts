@@ -31,16 +31,30 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
     return cssStyleSheet;
 };
 
+type propertySimpleDefinition = BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
+type propertyComplexDefinition = { type: propertySimpleDefinition, observer: string | ((val: {}, old: {}) => void); };
+type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
+
 // decorators
-export function property(type?: any) {
+export function property(par?: propertyDefinition) {
     return function (target: Object, propertyKey: PropertyKey) {
         //@ts-ignore
         if (!target.constructor.properties) {
             //@ts-ignore
             target.constructor.properties = {};
         }
-        //@ts-ignore
-        target.constructor.properties[propertyKey] = type ? type : String;
+        if (par && ((<propertyComplexDefinition>par).type != null || (<propertyComplexDefinition>par).observer != null)) {
+            if ((<propertyComplexDefinition>par).observer) {
+                //todo
+                //_createObservableProperty
+            }
+            //@ts-ignore
+            target.constructor.properties[propertyKey] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
+        }
+        else {
+            //@ts-ignore
+            target.constructor.properties[propertyKey] = par ? par : String;
+        }
     }
 }
 
@@ -130,27 +144,27 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             let attributes = Array.from(node.attributes);
             for (let a of attributes) {
                 if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     let elementsCache: Node[] = [];
                     this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;','&');
+                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1](true);
@@ -186,7 +200,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         workingNode = document.createElement('span');
                     }
 
-                    let value = m[0].substr(2, m[0].length - 4).replaceAll('&amp;','&');
+                    let value = m[0].substr(2, m[0].length - 4).replaceAll('&amp;', '&');
                     this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes));
                     this._bindings[this._bindings.length - 1](true);
                     if (node != workingNode) {
@@ -260,7 +274,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (firstRun || node[property] !== value) {
                 if (removeAttributes && attribute)
                     (<Element>node).removeAttribute(attribute.name);
-                node[property] = value;
+                if (property === 'innerHTML' && value instanceof Element) {
+                    for (let c = node.firstChild; c !== null; c = node.firstChild) {
+                        node.removeChild(c);
+                    }
+                    (<Element>node).appendChild(value)
+                } else {
+                    node[property] = value;
+                }
             }
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
@@ -324,27 +345,42 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     protected _createObservableProperties() {
         //@ts-ignore
         for (let i in this.constructor.properties) {
-            let descriptor = Reflect.getOwnPropertyDescriptor(this, i);
-            if (!descriptor) {
-                descriptor = { configurable: true, enumerable: true };
-                descriptor.get = () => this[internalPrefix + i];
-                descriptor.set = (v) => {
-                    this[internalPrefix + i] = v;
+            this._createObservableProperty(i, null);
+        }
+    }
+
+    private _createObservableProperty(propertyName: string, observer: string) {
+
+        let descriptor = Reflect.getOwnPropertyDescriptor(this, propertyName);
+        if (!descriptor) {
+            descriptor = { configurable: true, enumerable: true };
+            descriptor.get = () => this[internalPrefix + propertyName];
+            descriptor.set = (v) => {
+                if (this[internalPrefix + propertyName] !== v) {
+                    let old = this[internalPrefix + propertyName];
+                    this[internalPrefix + propertyName] = v;
+                    if (observer)
+                        this[observer](v, old);
                     this._bindingsRefresh();
-                };
-                Reflect.defineProperty(this, i, descriptor)
-            } else {
-                if (descriptor.hasOwnProperty('value') && descriptor.writable && descriptor.configurable) {
-                    this[internalPrefix + i] = descriptor.value;
-                    delete descriptor.value;
-                    delete descriptor.writable;
-                    descriptor.get = () => this[internalPrefix + i];
-                    descriptor.set = (v) => {
-                        this[internalPrefix + i] = v;
-                        this._bindingsRefresh();
-                    };
-                    Reflect.defineProperty(this, i, descriptor)
                 }
+            };
+            Reflect.defineProperty(this, propertyName, descriptor)
+        } else {
+            if (descriptor.hasOwnProperty('value') && descriptor.writable && descriptor.configurable) {
+                this[internalPrefix + propertyName] = descriptor.value;
+                delete descriptor.value;
+                delete descriptor.writable;
+                descriptor.get = () => this[internalPrefix + propertyName];
+                descriptor.set = (v) => {
+                    if (this[internalPrefix + propertyName] !== v) {
+                        let old = this[internalPrefix + propertyName];
+                        this[internalPrefix + propertyName] = v;
+                        if (observer)
+                            this[observer](v, old);
+                        this._bindingsRefresh();
+                    }
+                };
+                Reflect.defineProperty(this, propertyName, descriptor)
             }
         }
     }
