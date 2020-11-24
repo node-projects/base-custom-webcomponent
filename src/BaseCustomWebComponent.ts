@@ -93,8 +93,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     }
 
     protected _assignEvents(node?: Node) {
-        if (!node)
-            node = this.shadowRoot;
+        if (!node) {
+            node = this.shadowRoot.children.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
+        }
         if (node instanceof Element) {
             for (let a of node.attributes) {
                 if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
