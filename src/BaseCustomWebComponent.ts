@@ -476,6 +476,10 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
             if (this.ready)
                 //@ts-ignore
                 this.ready();
+            //@ts-ignore
+            if (this.readyLazy)
+                //@ts-ignore
+                requestAnimationFrame(this.readyLazy.bind(this)());
         })
     }
 }
@@ -499,6 +503,10 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
             if (this.ready)
                 //@ts-ignore
                 this.ready();
+            //@ts-ignore
+            if (this.readyLazy)
+                //@ts-ignore
+                requestAnimationFrame(this.readyLazy.bind(this)());
         })
     }
 }
