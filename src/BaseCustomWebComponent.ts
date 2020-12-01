@@ -421,6 +421,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
       }
     }*/
 
+    protected async _waitForChildrenReady() {
+        await Promise.all(Array.from(this.shadowRoot.querySelectorAll(':not(:defined)'), n => customElements.whenDefined(n.localName)));
+    }
+
     protected _rootDocumentFragment: DocumentFragment;
 
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
