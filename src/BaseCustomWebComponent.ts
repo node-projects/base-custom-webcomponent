@@ -76,6 +76,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly template: HTMLTemplateElement;
 
     protected _bindings: ((firstRun?: boolean) => void)[];
+    protected _callReady = false;
 
     //@ts-ignore
     private static _bindingRegex = /\[\[.*?\]\]/g;
@@ -473,14 +474,20 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
                 this.oneTimeSetup();
             }
             //@ts-ignore
-            if (this.ready)
+            if (this.ready && this.isConnected)
                 //@ts-ignore
                 this.ready();
-            //@ts-ignore
-            if (this.readyLazy)
-                //@ts-ignore
-                requestAnimationFrame(this.readyLazy.bind(this)());
+            else
+                this._callReady = true;
         })
+    }
+
+    connectedCallback() {
+        if (this._callReady) {
+            //@ts-ignore
+            this.ready();
+            this._callReady = false;
+        }
     }
 }
 
@@ -500,13 +507,19 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
                 this.oneTimeSetup();
             }
             //@ts-ignore
-            if (this.ready)
+            if (this.ready && this.isConnected)
                 //@ts-ignore
                 this.ready();
-            //@ts-ignore
-            if (this.readyLazy)
-                //@ts-ignore
-                requestAnimationFrame(this.readyLazy.bind(this)());
+            else
+                this._callReady = true;
         })
+    }
+
+    connectedCallback() {
+        if (this._callReady) {
+            //@ts-ignore
+            this.ready();
+            this._callReady = false;
+        }
     }
 }
