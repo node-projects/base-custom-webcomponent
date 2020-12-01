@@ -122,6 +122,6 @@ The ready method will be called, when the component is connected the first time.
           await this._waitForChildrenReady();
           // now all children are ready!
           
-          const autocompleteMaterial = this._getDomElement<AutoCompleteBox>('XYZ');
+          const myChild = this._getDomElement<CustomAutoCompleteBoxComponent>('XYZ');
   
 ```
