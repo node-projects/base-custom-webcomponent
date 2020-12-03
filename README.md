@@ -113,3 +113,15 @@ export class TestElement extends BaseCustomWebComponentConstructorAppend {
 ## Online Sample
 
 https://codesandbox.io/s/cool-architecture-skf1j?fontsize=14&hidenavigation=1&theme=dark&file=/src/test-element.ts
+
+## ready method
+The ready method will be called, when the component is connected the first time. Be aware, that there is no information about the child components. They could be still not ready. When you need to interact with child componets, then use the method _waitForChildrenReady.
+
+```
+  public async ready(): Promise<void> {
+          await this._waitForChildrenReady();
+          // now all children are ready!
+          
+          const myChild = this._getDomElement<CustomAutoCompleteBoxComponent>('XYZ');
+  
+```
