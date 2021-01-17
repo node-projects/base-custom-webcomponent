@@ -41,6 +41,7 @@ class:className=[[boolExpression]] to set/remove a css class
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
 use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable
+you could also use 'index' variable in the repeat binding for the current number. withe the attribute repeat-index you could change the name of the index variable.
 
 ## Developing
 

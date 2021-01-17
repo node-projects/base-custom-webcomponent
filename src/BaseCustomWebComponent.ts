@@ -120,7 +120,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
      * 
      * use {{this.property:change;paste}} for two way wich binds to events 'change 'and 'paste'
      * 
-     * use @eventname=[[this.eventHandler]] to bind a handler to a event
+     * use @eventname="eventHandler" to bind a handler to a event
+     * or @eventname="[[this.eventHandler(par1, par2, ..)]]" for complexer event logic 
      * 
      * use css:cssPropertyName=[[expression]] to bind to a css property
      * 
@@ -156,9 +157,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    let camelCased = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    let bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     let elementsCache: Node[] = [];
-                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, camelCased, value, repeatBindingItems, elementsCache));
+                    let bindingIndexname = 'index';
+                    let indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
+                    if (indexNameAttribute)
+                        bindingIndexname = indexNameAttribute.value;
+                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
@@ -245,7 +250,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         return value;
     }
 
-    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[]) {
+    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[]) {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems);
             if (values) {
@@ -253,15 +258,18 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     if (c.parentElement)
                         c.parentElement.removeChild(c);
                 }
+                let i = 0;
                 for (let e of values) {
                     let intRepeatBindingItems: repeatBindingItem[] = [];
                     if (repeatBindingItems)
                         intRepeatBindingItems = repeatBindingItems.slice();
                     intRepeatBindingItems.push({ name: bindingProperty, item: e });
+                    intRepeatBindingItems.push({ name: bindingIndexName, item: i });
                     let nd = <DocumentFragment>node.content.cloneNode(true);
                     elementsCache.push(...nd.children);
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true);
                     node.parentElement.appendChild(nd);
+                    i++;
                 }
             }
         } catch (error) {
@@ -479,7 +487,7 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
             //@ts-ignore
             if (this.ready)
                 //@ts-ignore
-                this.ready();            
+                this.ready();
         })
     }
 }
