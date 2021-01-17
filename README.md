@@ -126,3 +126,7 @@ The ready method will be called, when the component is connected the first time.
           const myChild = this._getDomElement<CustomAutoCompleteBoxComponent>('XYZ');
   
 ```
+
+## Articles 
+
+https://medium.com/@jochenkhner/a-idea-for-a-base-class-for-web-components-in-2020-b68e0fdf7bca
