@@ -118,7 +118,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
      * 
      * use [[expression]] for one way bindings
      * 
-     * use {{this.property:change;paste}} for two way wich binds to events 'change 'and 'paste'
+     * use {{this.property::change;paste}} for two way wich binds to events 'change 'and 'paste'
      * 
      * use @eventname="eventHandler" to bind a handler to a event
      * or @eventname="[[this.eventHandler(par1, par2, ..)]]" for complexer event logic 
@@ -160,10 +160,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     let elementsCache: Node[] = [];
                     let bindingIndexname = 'index';
+                    let changeItemCallback = null;
                     let indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
                     if (indexNameAttribute)
                         bindingIndexname = indexNameAttribute.value;
-                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, repeatBindingItems, elementsCache));
+                    let changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-change-item-callback');
+                    if (changeItemCallbackAttribute)
+                        changeItemCallback = changeItemCallbackAttribute.value;
+                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache));
                     this._bindings[this._bindings.length - 1]();
                 } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
@@ -250,7 +254,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         return value;
     }
 
-    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[]) {
+    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[]) {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems);
             if (values) {
@@ -268,13 +272,38 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let nd = <DocumentFragment>node.content.cloneNode(true);
                     elementsCache.push(...nd.children);
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true);
-                    node.parentElement.appendChild(nd);
+
+                    if (callback) {
+                        if (callback.startsWith('[[') && callback.endsWith(']]'))
+                            callback = callback.substring(2, callback.length - 2);
+                        else
+                            callback = "this." + callback;
+                        let nds = this._bindingRunRepeatCallback(callback, nd.children, e, 'create');
+                        if (nds === undefined)
+                            nds = nd.children;
+                        if (nds)
+                            for (let n of nds)
+                                node.parentElement.appendChild(n);
+                    }
+                    else
+                        node.parentElement.appendChild(nd);
                     i++;
                 }
             }
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
         }
+    }
+
+    private _bindingRunRepeatCallback(callback: string, nodes: HTMLCollection, item: any, callbackType: 'create'): HTMLCollection {
+        //@ts-ignore
+        var item = item;
+        //@ts-ignore
+        var nodes = nodes;
+        //@ts-ignore
+        var callbackType = callbackType;
+        let value = eval(callback);
+        return value;
     }
 
     private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean) {

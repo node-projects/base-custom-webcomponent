@@ -32,7 +32,7 @@ The Bindings are heavily inspired by polymer
 
 use [[expression]] for one way bindings
 
-use {{this.property:change;paste}} for two way bindings which listens to events 'change 'and 'paste'
+use {{this.property::change;paste}} for two way bindings which listens to events 'change 'and 'paste'
 
 css:cssPropertyName=[[expression]] to bind to a css property
 
