@@ -155,6 +155,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
                     this._bindings[this._bindings.length - 1]();
+                } else if (a.name == 'repeat-changed-item-callback') {
+                    //do nothing
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -164,7 +166,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
                     if (indexNameAttribute)
                         bindingIndexname = indexNameAttribute.value;
-                    let changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-change-item-callback');
+                    let changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
                     if (changeItemCallbackAttribute)
                         changeItemCallback = changeItemCallbackAttribute.value;
                     this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache));
@@ -278,7 +280,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             callback = callback.substring(2, callback.length - 2);
                         else
                             callback = "this." + callback;
-                        let nds = this._bindingRunRepeatCallback(callback, nd.children, e, 'create');
+
+                        intRepeatBindingItems.push({ name: 'nodes', item: nd.children });
+                        intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
+                        let nds = this._bindingRunEval(callback, intRepeatBindingItems);
                         if (nds === undefined)
                             nds = nd.children;
                         if (nds)
@@ -293,17 +298,6 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         } catch (error) {
             console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
         }
-    }
-
-    private _bindingRunRepeatCallback(callback: string, nodes: HTMLCollection, item: any, callbackType: 'create'): HTMLCollection {
-        //@ts-ignore
-        var item = item;
-        //@ts-ignore
-        var nodes = nodes;
-        //@ts-ignore
-        var callbackType = callbackType;
-        let value = eval(callback);
-        return value;
     }
 
     private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean) {
