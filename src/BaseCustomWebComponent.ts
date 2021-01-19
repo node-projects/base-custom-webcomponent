@@ -239,9 +239,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (repeatBindingItems) {
             let n = 0;
             let set = new Set();
-            for (let b of repeatBindingItems) {                
-                expression = (!set.has (b.name) ? 'let ' : '') + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
-                set.add(b.name);
+            for (let b of repeatBindingItems) {
+                if (!set.has(b.name)) {
+                    expression = 'let ' + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
+                    set.add(b.name);
+                }
                 n++;
             }
             if (event) {
