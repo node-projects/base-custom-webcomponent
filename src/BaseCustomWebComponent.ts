@@ -238,8 +238,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event?: Event) {
         if (repeatBindingItems) {
             let n = 0;
-            for (let b of repeatBindingItems) {
-                expression = 'let ' + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
+            let set = new Set();
+            for (let b of repeatBindingItems) {                
+                expression = (!set.has (b.name) ? 'let ' : '') + b.name + ' = ___repeatBindingItems[' + n + '].item;' + expression;
+                set.add(b.name);
                 n++;
             }
             if (event) {
