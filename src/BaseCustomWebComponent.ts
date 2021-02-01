@@ -76,6 +76,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly template: HTMLTemplateElement;
 
     protected _bindings: ((firstRun?: boolean) => void)[];
+    protected _repeatWeakMap: WeakMap<any, Element[]>;
 
     //@ts-ignore
     private static _bindingRegex = /\[\[.*?\]\]/g;
@@ -264,9 +265,21 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems);
             if (values) {
+                if (callback) {
+                    if (callback.startsWith('[[') && callback.endsWith(']]'))
+                        callback = callback.substring(2, callback.length - 2);
+                    else
+                        callback = "this." + callback;
+                }
+
                 for (let c of elementsCache) { // todo bindings of childs need to be killed
-                    if (c.parentElement)
+                    if (c.parentElement) {
+                        let intRepeatBindingItems: repeatBindingItem[] = [];
+                        intRepeatBindingItems.push({ name: 'nodes', item: [c] });
+                        intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
+                        this._bindingRunEval(callback, intRepeatBindingItems);
                         c.parentElement.removeChild(c);
+                    }
                 }
                 let i = 0;
                 for (let e of values) {
@@ -280,22 +293,19 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true);
 
                     if (callback) {
-                        if (callback.startsWith('[[') && callback.endsWith(']]'))
-                            callback = callback.substring(2, callback.length - 2);
-                        else
-                            callback = "this." + callback;
-
                         intRepeatBindingItems.push({ name: 'nodes', item: nd.children });
                         intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
                         let nds = this._bindingRunEval(callback, intRepeatBindingItems);
                         if (nds === undefined)
                             nds = nd.children;
-                        if (nds)
-                            for (let n of nds)
-                                node.parentElement.appendChild(n);
+                        if (nds) {
+                            for (let n of Array.from(nds))
+                                node.parentElement.appendChild(<Node>n);
+                        }
                     }
-                    else
+                    else {
                         node.parentElement.appendChild(nd);
+                    }
                     i++;
                 }
             }
