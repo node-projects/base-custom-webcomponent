@@ -399,6 +399,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
         let descriptor = Reflect.getOwnPropertyDescriptor(this, propertyName);
         if (!descriptor) {
+            this[internalPrefix + propertyName] = this[propertyName];
             descriptor = { configurable: true, enumerable: true };
             descriptor.get = () => this[internalPrefix + propertyName];
             descriptor.set = (v) => {
