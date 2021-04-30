@@ -1,3 +1,5 @@
+import { addTouchFriendlyContextMenu } from "./TouchContextMenu";
+
 export const html = function (strings: TemplateStringsArray, ...values: any[]): HTMLTemplateElement {
     const template = document.createElement('template');
     template.innerHTML = strings.raw[0];
@@ -31,8 +33,8 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
     return cssStyleSheet;
 };
 
-type propertySimpleDefinition = BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition, observer: string | ((val: {}, old: {}) => void); };
+type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
+type propertyComplexDefinition = { type: propertySimpleDefinition, observer?: string | ((val: {}, old: {}) => void); };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 // decorators
@@ -102,7 +104,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
                     //node.removeAttribute(a.name);
                     try {
-                        node.addEventListener(a.name.substr(1), this[a.value].bind(this));
+                        if (a.name == "@touch:contextmenu")
+                            addTouchFriendlyContextMenu(node, this[a.value].bind(this));
+                        else
+                            node.addEventListener(a.name.substr(1), this[a.value].bind(this));
+
                     } catch (error) {
                         console.warn((<Error>error).message, 'Failed to attach event "', a, node);
                     }
@@ -123,6 +129,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
      * 
      * use @eventname="eventHandler" to bind a handler to a event
      * or @eventname="[[this.eventHandler(par1, par2, ..)]]" for complexer event logic 
+     * use @touch:contextmenu... for a context menu that also works with long press on touch
      * 
      * use css:cssPropertyName=[[expression]] to bind to a css property
      * 
@@ -150,12 +157,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings[this._bindings.length - 1](true);
                 } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems));
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings[this._bindings.length - 1](true);
                 } else if (a.name == 'repeat-changed-item-callback') {
                     //do nothing
                 } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
@@ -171,11 +178,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     if (changeItemCallbackAttribute)
                         changeItemCallback = changeItemCallbackAttribute.value;
                     this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache));
-                    this._bindings[this._bindings.length - 1]();
+                    this._bindings[this._bindings.length - 1](true);
                 } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
+                    if (a.name == "@touch:contextmenu")
+                        addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e));
+                    else
+                        node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -362,7 +372,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     protected _bindingsRefresh() {
         if (this._bindings)
-            this._bindings.forEach(x => x());
+            this._bindings.forEach(x => x(false));
     }
 
     protected _bindingsSetValue(obj, path: string, value) {
