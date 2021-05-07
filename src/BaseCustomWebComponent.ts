@@ -1,4 +1,5 @@
 import { addTouchFriendlyContextMenu } from "./TouchContextMenu";
+import { TypedEvent } from './TypedEvent';
 
 export const html = function (strings: TemplateStringsArray, ...values: any[]): HTMLTemplateElement {
     const template = document.createElement('template');
@@ -106,9 +107,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     try {
                         if (a.name == "@touch:contextmenu")
                             addTouchFriendlyContextMenu(node, this[a.value].bind(this));
-                        else
-                            node.addEventListener(a.name.substr(1), this[a.value].bind(this));
-
+                        else {
+                            let nm = a.name.substr(1).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            if (node[nm] instanceof TypedEvent) {
+                                (<TypedEvent<any>>node[nm]).on(this[a.value].bind(this));
+                            } else {
+                                node.addEventListener(nm, this[a.value].bind(this));
+                            }
+                        }
                     } catch (error) {
                         console.warn((<Error>error).message, 'Failed to attach event "', a, node);
                     }
@@ -184,8 +190,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     let camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                     if (a.name == "@touch:contextmenu")
                         addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e));
-                    else
-                        node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
+                    else {
+                        if (node[camelCased] instanceof TypedEvent) {
+                            (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e));
+                        } else {
+                            node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e));
+                        }
+                    }
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -547,6 +558,29 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
         queueMicrotask(() => {
+
+            //@ts-ignore
+            if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
+                //@ts-ignore
+                this.constructor._oneTimeSetup = true;
+                //@ts-ignore
+                this.oneTimeSetup();
+            }
+            //@ts-ignore
+            if (this.ready)
+                //@ts-ignore
+                this.ready();
+        })
+    }
+}
+
+export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustomWebComponentNoAttachedTemplate {
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
+        super(template, style)
+        if (this._rootDocumentFragment)
+            this.shadowRoot.appendChild(this._rootDocumentFragment);
+
+        requestAnimationFrame(() => {
 
             //@ts-ignore
             if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
