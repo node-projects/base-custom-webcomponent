@@ -10,7 +10,7 @@
     "tsc": "tsc"
   },
   "devDependencies": {
-    "typescript": "^4.1.5"
+    "typescript": "^4.3.2"
   },
   "dependencies": {},
   "repository": {
