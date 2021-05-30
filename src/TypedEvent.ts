@@ -7,6 +7,11 @@ export interface Disposable {
 }
 
 export class PropertyChangedArgs<T> {
+    constructor(newValue?: T, oldValue?: T) {
+        this.newValue = newValue;
+        this.oldValue = oldValue;
+    }
+    
     oldValue: T;
     newValue: T;
 }
