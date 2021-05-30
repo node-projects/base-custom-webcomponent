@@ -6,6 +6,11 @@ export interface Disposable {
     dispose();
 }
 
+export class PropertyChangedArgs<T> {
+    oldValue: T;
+    newValue: T;
+}
+
 export class TypedEvent<T> {
     private listeners: Listener<T>[] = [];
     private listenersOncer: Listener<T>[] = [];
