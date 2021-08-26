@@ -103,7 +103,6 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (node instanceof Element) {
             for (let a of node.attributes) {
                 if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
-                    //node.removeAttribute(a.name);
                     try {
                         if (a.name == "@touch:contextmenu")
                             addTouchFriendlyContextMenu(node, this[a.value].bind(this));
