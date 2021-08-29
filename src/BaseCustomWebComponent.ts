@@ -103,7 +103,6 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (node instanceof Element) {
             for (let a of node.attributes) {
                 if (a.name.startsWith('@') && !a.value.startsWith('[[')) {
-                    //node.removeAttribute(a.name);
                     try {
                         if (a.name == "@touch:contextmenu")
                             addTouchFriendlyContextMenu(node, this[a.value].bind(this));
@@ -112,7 +111,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             if (node[nm] instanceof TypedEvent) {
                                 (<TypedEvent<any>>node[nm]).on(this[a.value].bind(this));
                             } else {
-                                node.addEventListener(nm, this[a.value].bind(this));
+                                node.addEventListener(a.name, this[a.value].bind(this));
                             }
                         }
                     } catch (error) {
