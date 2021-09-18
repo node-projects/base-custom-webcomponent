@@ -107,11 +107,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (a.name == "@touch:contextmenu")
                             addTouchFriendlyContextMenu(node, this[a.value].bind(this));
                         else {
-                            let nm = a.name.substr(1).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            const sNm = a.name.substr(1);
+                            let nm = sNm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             if (node[nm] instanceof TypedEvent) {
                                 (<TypedEvent<any>>node[nm]).on(this[a.value].bind(this));
                             } else {
-                                node.addEventListener(a.name, this[a.value].bind(this));
+                                node.addEventListener(sNm, this[a.value].bind(this));
                             }
                         }
                     } catch (error) {
