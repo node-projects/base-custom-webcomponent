@@ -34,9 +34,11 @@ use [[expression]] for one way bindings
 
 use {{this.property::change;paste}} for two way bindings which listens to events 'change 'and 'paste'
 
-css:cssPropertyName=[[expression]] to bind to a css property
+css:cssPropertyName="[[expression]]" to bind to a css property
 
-class:className=[[boolExpression]] to set/remove a css class
+class:className="[[boolExpression]]" to set/remove a css class
+
+$bla="[[]]" to bind to Attributes instead of properties.
 
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
