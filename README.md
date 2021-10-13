@@ -38,7 +38,7 @@ css:cssPropertyName="[[expression]]" to bind to a css property
 
 class:className="[[boolExpression]]" to set/remove a css class
 
-$bla="[[]]" to bind to Attributes instead of properties.
+$attribute="[[expression]]" to bind to Attributes instead of properties.
 
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 

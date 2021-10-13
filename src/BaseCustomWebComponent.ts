@@ -1,5 +1,5 @@
-import { addTouchFriendlyContextMenu } from "./TouchContextMenu";
-import { TypedEvent } from './TypedEvent';
+import { addTouchFriendlyContextMenu } from "./TouchContextMenu.js";
+import { TypedEvent } from './TypedEvent.js';
 
 export const html = function (strings: TemplateStringsArray, ...values: any[]): HTMLTemplateElement {
     const template = document.createElement('template');
@@ -297,6 +297,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             for (let i in context) {
                 expression = 'let ' + i + ' = ___context["' + i + '"];' + expression;
             }
+            //@ts-ignore
             var ___context = context;
             let value = eval(expression);
             return value;
