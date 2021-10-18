@@ -55,4 +55,12 @@ export class DomHelper {
                 return i;
         return -1;
     }
+
+    static getHost(node: Node) {
+        while (node.parentElement)
+            node = node.parentElement;
+        if ((<ShadowRoot>node).host)
+            return (<ShadowRoot>node).host
+        return (<ShadowRoot>node.parentNode).host;
+    }
 }

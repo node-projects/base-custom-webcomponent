@@ -502,7 +502,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 if (pair[1] === Boolean)
                     this[pair[0]] = true;
                 else if (pair[1] === Object) {
-                    if (!a.value.startsWith("{{") && a.value.startsWith("[["))
+                    if (!a.value.startsWith("{{") && !a.value.startsWith("[["))
                         this[pair[0]] = JSON.parse(a.value);
                 }
                 else
