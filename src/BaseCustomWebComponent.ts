@@ -200,7 +200,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
                     let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context));
+                    let noNull = false;
+                    if (value.startsWith('?')) {
+                        value = value.substring(1);
+                        noNull = true;
+                    }
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
                     this._bindings[this._bindings.length - 1](true);
                 } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
                     let attributeValues = a.value.substring(2, a.value.length - 2).split('::');
@@ -209,7 +214,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     if (attributeValues.length > 1 && attributeValues[1])
                         event = attributeValues[1];
                     let camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context));
+                    let noNull = false;
+                    if (value.startsWith('?')) {
+                        value = value.substring(1);
+                        noNull = true;
+                    }
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
                     this._bindings[this._bindings.length - 1](true);
                     if (event) {
                         event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
@@ -235,7 +245,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     }
 
                     let value = m[0].substr(2, m[0].length - 4).replaceAll('&amp;', '&');
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context));
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
                     this._bindings[this._bindings.length - 1](true);
                     if (node != workingNode) {
                         node.appendChild(workingNode);
@@ -359,7 +369,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
+    private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, noNull: boolean) {
         try {
             const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
             if (firstRun || node[property] !== value) {
@@ -371,12 +381,16 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     }
                     (<Element>node).appendChild(value)
                 } else {
-                    if (property[0] == '$')
+                    if (property[0] == '$') {
+                        if (value || !noNull)
                         (<Element>node).setAttribute(property.substring(1, property.length), value);
+                    }
                     else if (property == 'class')
                         (<Element>node).setAttribute(property, value);
-                    else
-                        node[property] = value;
+                    else {
+                        if (value || !noNull)
+                            node[property] = value;
+                    }
                 }
             }
         } catch (error) {
