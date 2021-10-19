@@ -45,6 +45,11 @@ sub <template></template> elements are not bound, so elements like <iron-list> o
 use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable.
 You could also use 'index' variable in the repeat binding for the current number. The attribute "repeat-index" could be used to change the name of the index variable.
 on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(item, nodes)]]
+    
+### Binding extensions
+
+ - Null/Undefined Extension {{? }} - If you start e two way binding with a questionmark (like this: {{?), the value of the binding is assigned as an empty string when null or undefined.
+ - Invert extension {{! }} - If you use "!" on the start of a Binding, the bool value is inverted, and also asigned inverted (not yet developed, will do if needed)   
 
 ## Developing
 
