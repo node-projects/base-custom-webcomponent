@@ -382,13 +382,17 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     (<Element>node).appendChild(value)
                 } else {
                     if (property[0] == '$') {
-                        if (value || !noNull)
-                        (<Element>node).setAttribute(property.substring(1, property.length), value);
+                        if (!value && noNull)
+                            (<Element>node).setAttribute(property.substring(1, property.length), '');
+                        else
+                            (<Element>node).setAttribute(property.substring(1, property.length), value);
                     }
                     else if (property == 'class')
                         (<Element>node).setAttribute(property, value);
                     else {
-                        if (value || !noNull)
+                        if (!value && noNull)
+                            node[property] = '';
+                        else
                             node[property] = value;
                     }
                 }
