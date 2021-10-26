@@ -11,7 +11,7 @@ export class PropertyChangedArgs<T> {
         this.newValue = newValue;
         this.oldValue = oldValue;
     }
-    
+
     oldValue: T;
     newValue: T;
 }
@@ -19,11 +19,19 @@ export class PropertyChangedArgs<T> {
 export class TypedEvent<T> {
     private listeners: Listener<T>[] = [];
     private listenersOncer: Listener<T>[] = [];
+    private listenerSingle: Listener<T> = null;
 
     on = (listener: Listener<T>): Disposable => {
         this.listeners.push(listener);
         return {
             dispose: () => this.off(listener)
+        };
+    }
+
+    single = (listener: Listener<T>): Disposable => {
+        this.listenerSingle = listener;
+        return {
+            dispose: () => { if (this.listenerSingle === listener) this.listenerSingle = null }
         };
     }
 
@@ -43,6 +51,9 @@ export class TypedEvent<T> {
             const toCall = this.listenersOncer;
             this.listenersOncer = [];
             toCall.forEach(listener => listener(event));
+        }
+        if (this.listenerSingle) {
+            this.listenerSingle(event);
         }
     }
 
