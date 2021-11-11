@@ -35,7 +35,7 @@ export const cssAsync = async function (strings: TemplateStringsArray, ...values
 };
 
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition, observer?: string | ((val: {}, old: {}) => void); };
+type propertyComplexDefinition = { type: propertySimpleDefinition; };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 // decorators
@@ -46,11 +46,7 @@ export function property(par?: propertyDefinition) {
             //@ts-ignore
             target.constructor.properties = {};
         }
-        if (par && ((<propertyComplexDefinition>par).type != null || (<propertyComplexDefinition>par).observer != null)) {
-            if ((<propertyComplexDefinition>par).observer) {
-                //todo
-                //_createObservableProperty
-            }
+        if (par && (<propertyComplexDefinition>par).type != null) {
             //@ts-ignore
             target.constructor.properties[propertyKey] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
         }
@@ -69,8 +65,6 @@ export function customElement(tagname: string) {
         customElements.define(tagname, class_);
     }
 }
-
-const internalPrefix = '___';
 
 type repeatBindingItem = { name: string, item: any }
 
@@ -428,7 +422,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    protected _bindingsRefresh() {
+    protected _bindingsRefresh(property?: string) {
         if (this._bindings)
             this._bindings.forEach(x => x(false));
     }
@@ -454,50 +448,6 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
 
         obj[pathParts[pathParts.length - 1]] = value;
-    }
-
-    protected _createObservableProperties() {
-        //@ts-ignore
-        for (let i in this.constructor.properties) {
-            this._createObservableProperty(i, null);
-        }
-    }
-
-    private _createObservableProperty(propertyName: string, observer: string) {
-
-        let descriptor = Reflect.getOwnPropertyDescriptor(this, propertyName);
-        if (!descriptor) {
-            this[internalPrefix + propertyName] = this[propertyName];
-            descriptor = { configurable: true, enumerable: true };
-            descriptor.get = () => this[internalPrefix + propertyName];
-            descriptor.set = (v) => {
-                if (this[internalPrefix + propertyName] !== v) {
-                    let old = this[internalPrefix + propertyName];
-                    this[internalPrefix + propertyName] = v;
-                    if (observer)
-                        this[observer](v, old);
-                    this._bindingsRefresh();
-                }
-            };
-            Reflect.defineProperty(this, propertyName, descriptor)
-        } else {
-            if (descriptor.hasOwnProperty('value') && descriptor.writable && descriptor.configurable) {
-                this[internalPrefix + propertyName] = descriptor.value;
-                delete descriptor.value;
-                delete descriptor.writable;
-                descriptor.get = () => this[internalPrefix + propertyName];
-                descriptor.set = (v) => {
-                    if (this[internalPrefix + propertyName] !== v) {
-                        let old = this[internalPrefix + propertyName];
-                        this[internalPrefix + propertyName] = v;
-                        if (observer)
-                            this[observer](v, old);
-                        this._bindingsRefresh();
-                    }
-                };
-                Reflect.defineProperty(this, propertyName, descriptor)
-            }
-        }
     }
 
     //@ts-ignore

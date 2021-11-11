@@ -24,7 +24,6 @@ All the features are not enabled by default for performance reasons but you can 
  - this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
  - this._assignEvents(); ==> parses @event bindings to callbacks in class
  - this._bindingsParse(); ==> parses and enables bindings
- - this._createObservableProperties(); ==> creates getters/setters for each property and calls this._bingsRefresh() in each setter;
 
 ## Bindings
 
@@ -101,7 +100,6 @@ export class TestElement extends BaseCustomWebComponentConstructorAppend {
 
     async ready() {
         this._root = this._getDomElement<HTMLDivElement>('root');
-        this._createObservableProperties();
         this._parseAttributesToProperties();
         this._bindingsParse();
         this._assignEvents();
