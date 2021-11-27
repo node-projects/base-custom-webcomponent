@@ -129,6 +129,10 @@ export class TestElement extends BaseCustomWebComponentConstructorAppend {
 
 https://codesandbox.io/s/base-custom-webcomponent-wkopk?file=/src/test-element.ts
 
+or here a repo
+
+https://github.com/node-projects/base-custom-webcomponent-sample
+
 ## ready method
 The ready method will be called, when the component is connected the first time. Be aware, that there is no information about the child components. They could be still not ready. When you need to interact with child componets, then use the method _waitForChildrenReady.
 
