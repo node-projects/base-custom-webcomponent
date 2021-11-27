@@ -149,8 +149,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (!this._bindings)
             this._bindings = [];
         if (!node)
-            node = this.shadowRoot.children.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
-        if (node instanceof Element) {
+            node = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
+        if (node instanceof Element) { //node.nodeType === 1
             let attributes = Array.from(node.attributes);
             for (let a of attributes) {
                 if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
@@ -220,35 +220,32 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     }
                 }
             }
-
-            if (!node.children.length && !(node instanceof HTMLTemplateElement) && node.innerHTML) {
-                let text = node.innerHTML.trim();
+        } else if (node.nodeType === 3) {
+            if (node.nodeValue.indexOf('[[') >= 0) {
+                const text = node.nodeValue;
                 let matches = text.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
                 let lastindex = 0;
+                let fragment: DocumentFragment;
                 for (let m of matches) {
-                    if (lastindex == 0) {
-                        node.innerHTML = '';
-                    }
+                    if (!fragment)
+                        fragment = document.createDocumentFragment();
                     if (m.index - lastindex > 0) {
                         let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
-                        node.appendChild(tn);
+                        fragment.appendChild(tn);
                     }
-                    let workingNode = node;
-                    if (m.index > 0 || m[0].length != text.length) {
-                        workingNode = document.createElement('span');
-                    }
-
-                    let value = m[0].substr(2, m[0].length - 4).replaceAll('&amp;', '&');
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, workingNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                    const newNode = document.createElement('span');
+                    let value = m[0].substr(2, m[0].length - 4);
+                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
                     this._bindings[this._bindings.length - 1](true);
-                    if (node != workingNode) {
-                        node.appendChild(workingNode);
-                    }
+                    fragment.appendChild(newNode);
                     lastindex = m.index + m[0].length;
                 }
-                if (lastindex > 0 && text.length - lastindex > 0) {
-                    let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
-                    node.appendChild(tn);
+                if (fragment) {
+                    if (lastindex > 0 && text.length - lastindex > 0) {
+                        let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
+                        fragment.appendChild(tn);
+                    }
+                    node.parentNode.replaceChild(fragment, node);
                 }
             }
         }
@@ -553,6 +550,7 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
 export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super(template, style)
+
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
