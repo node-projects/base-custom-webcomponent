@@ -16,6 +16,13 @@ The base class does:
   - oneTimeSetup()
   - ready()
 
+## Planed features
+
+Automatic Change Notification class fields via decorators are planed, but lack browser support at the moment: https://github.com/lit/lit/issues/2284
+For now we removed the this._createObservableProperties(); cause it would not work if you compile to newer javascript.
+
+Refresh Bindings - only for the changed value.
+At the moment the call refreshes all bindings, but this could (and should) be optimized.
 
 ## Advanced Features
 
