@@ -54,7 +54,7 @@ on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(i
     
 ### Binding extensions
 
- - Null/Undefined Extension {{? }} - If you start e two way binding with a questionmark (like this: {{?), the value of the binding is assigned as an empty string when null or undefined.
+ - Null/Undefined Extension {{? }} - If you start a two way binding with a questionmark (like this: {{?), the value of the binding is assigned as an empty string when null or undefined.
  - Invert extension {{! }} - If you use "!" on the start of a Binding, the bool value is inverted, and also asigned inverted (not yet developed, will do if needed)   
 
 ## Developing
