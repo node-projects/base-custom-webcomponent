@@ -319,12 +319,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
 
                 for (let c of elementsCache) { // todo bindings of childs need to be killed
-                    if (c.parentElement) {
+                    if (c.parentNode) {
                         let intRepeatBindingItems: repeatBindingItem[] = [];
                         intRepeatBindingItems.push({ name: 'nodes', item: [c] });
                         intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
                         this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
-                        c.parentElement.removeChild(c);
+                        c.parentNode.removeChild(c);
                     }
                 }
                 let i = 0;
@@ -346,11 +346,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             nds = nd.children;
                         if (nds) {
                             for (let n of Array.from(nds))
-                                node.parentElement.appendChild(<Node>n);
+                                node.parentNode.appendChild(<Node>n);
                         }
                     }
                     else {
-                        node.parentElement.appendChild(nd);
+                        node.parentNode.appendChild(nd);
                     }
                     i++;
                 }
