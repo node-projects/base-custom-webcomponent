@@ -227,18 +227,24 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 let lastindex = 0;
                 let fragment: DocumentFragment;
                 for (let m of matches) {
-                    if (!fragment)
-                        fragment = document.createDocumentFragment();
-                    if (m.index - lastindex > 0) {
-                        let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
-                        fragment.appendChild(tn);
+                    if (m.index == 0 && m.length == text.length) {
+                        let value = m[0].substr(2, m[0].length - 4);
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                        this._bindings[this._bindings.length - 1](true);
+                    } else {
+                        if (!fragment)
+                            fragment = document.createDocumentFragment();
+                        if (m.index - lastindex > 0) {
+                            let tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
+                            fragment.appendChild(tn);
+                        }
+                        const newNode = document.createElement('span');
+                        let value = m[0].substr(2, m[0].length - 4);
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                        this._bindings[this._bindings.length - 1](true);
+                        fragment.appendChild(newNode);
+                        lastindex = m.index + m[0].length;
                     }
-                    const newNode = document.createElement('span');
-                    let value = m[0].substr(2, m[0].length - 4);
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
-                    this._bindings[this._bindings.length - 1](true);
-                    fragment.appendChild(newNode);
-                    lastindex = m.index + m[0].length;
                 }
                 if (fragment) {
                     if (lastindex > 0 && text.length - lastindex > 0) {
