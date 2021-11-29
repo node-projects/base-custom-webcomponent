@@ -227,9 +227,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 let lastindex = 0;
                 let fragment: DocumentFragment;
                 for (let m of matches) {
-                    if (m.index == 0 && m[0].length == text.length) {
+                    if (m.index == 0 && m[0].length == text.length && node.parentNode.childNodes.length == 1) {
                         let value = m[0].substr(2, m[0].length - 4);
-                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                        let parent = node.parentNode;
+                        node.parentNode.removeChild(node);
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
                         this._bindings[this._bindings.length - 1](true);
                     } else {
                         if (!fragment)
