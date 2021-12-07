@@ -63,4 +63,13 @@ export class DomHelper {
             return (<ShadowRoot>node).host
         return (<ShadowRoot>node.parentNode).host;
     }
+
+    static nodeIsChildOf(node: Node, parentNode: Node) {
+        while (node.parentElement) {
+            if (node.parentElement == parentNode)
+                return true;
+            node = node.parentElement;
+        }
+        return false;
+    }
 }
