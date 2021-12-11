@@ -79,13 +79,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     private static _bindingRegex = /\[\[.*?\]\]/g;
 
     protected _getDomElement<T extends Element>(id: string): T {
-        if (this.shadowRoot.children.length > 0)
+        if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
             return <T>(<any>this.shadowRoot.getElementById(id));
         return <T>(<any>this._rootDocumentFragment.getElementById(id));
     }
 
     protected _getDomElements<T extends Element>(selector: string): T[] {
-        if (this.shadowRoot.children.length > 0)
+        if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
             return <T[]>(<any>this.shadowRoot.querySelectorAll(selector));
         return <T[]>(<any>this._rootDocumentFragment.querySelectorAll(selector));
     }
