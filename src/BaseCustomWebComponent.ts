@@ -508,9 +508,16 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     }
 
     protected _rootDocumentFragment: DocumentFragment;
-
+    protected _initialPropertyCache = new Map<string, any>();
+    
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super();
+
+        for (let p of Object.getOwnPropertyNames(this)) {            
+            const val = this[p];
+            delete this[p];
+            this[p] = val;
+        }
 
         this.attachShadow({ mode: 'open' });
 
