@@ -238,8 +238,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 const matches = text.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
                 let lastindex = 0;
                 let fragment: DocumentFragment;
+                const trimmedLength = text.trim().length;
                 for (let m of matches) {
-                    if (m.index == 0 && (m[0].length == text.length || m[0].length == text.trim().length) && node.parentNode.childNodes.length == 1) {
+                    if ((m[0].length == trimmedLength || (m.index == 0 && m[0].length == text.length)) && node.parentNode.childNodes.length == 1) {
                         const value = m[0].substr(2, m[0].length - 4);
                         const parent = node.parentNode;
                         node.parentNode.removeChild(node);
