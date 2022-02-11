@@ -239,7 +239,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 let lastindex = 0;
                 let fragment: DocumentFragment;
                 for (let m of matches) {
-                    if (m.index == 0 && m[0].length == text.length && node.parentNode.childNodes.length == 1) {
+                    if (m.index == 0 && (m[0].length == text.length || m[0].length == text.trim().length) && node.parentNode.childNodes.length == 1) {
                         const value = m[0].substr(2, m[0].length - 4);
                         const parent = node.parentNode;
                         node.parentNode.removeChild(node);
