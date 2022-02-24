@@ -1,7 +1,7 @@
 import { addTouchFriendlyContextMenu } from "./TouchContextMenu.js";
 import { TypedEvent } from './TypedEvent.js';
 
-function toParString(strings: TemplateStringsArray, ...values: any[]) {
+function toParString(strings: TemplateStringsArray, values: any[]) {
     if (strings.length === 1)
         return strings.raw[0];
     else {
