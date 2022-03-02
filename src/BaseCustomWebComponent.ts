@@ -80,15 +80,14 @@ export function customElement(tagname: string) {
 
 type repeatBindingItem = { name: string, item: any }
 
+let _bindingRegex = /\[\[.*?\]\]/g;
+
 export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
     static readonly template: HTMLTemplateElement;
 
     protected _bindings: ((firstRun?: boolean) => void)[];
     protected _repeatWeakMap: WeakMap<any, Element[]>;
-
-    //@ts-ignore
-    private static _bindingRegex = /\[\[.*?\]\]/g;
 
     protected _getDomElement<T extends Element>(id: string): T {
         if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
@@ -165,54 +164,56 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (node instanceof Element) { //node.nodeType === 1
             const attributes = Array.from(node.attributes);
             for (let a of attributes) {
-                if (a.name.startsWith('css:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
-                    this._bindings[this._bindings.length - 1](true);
-                } else if (a.name.startsWith('class:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
-                    this._bindings[this._bindings.length - 1](true);
-                } else if (a.name == 'repeat-changed-item-callback') {
-                    //do nothing
-                } else if (a.name.startsWith('repeat:') && a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    const elementsCache: Node[] = [];
-                    let bindingIndexname = 'index';
-                    let changeItemCallback = null;
-                    const indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
-                    if (indexNameAttribute)
-                        bindingIndexname = indexNameAttribute.value;
-                    const changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
-                    if (changeItemCallbackAttribute)
-                        changeItemCallback = changeItemCallbackAttribute.value;
-                    this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context));
-                    this._bindings[this._bindings.length - 1](true);
-                } else if (a.name.startsWith('@') && a.value.startsWith('[[') && a.value.endsWith(']]')) { //todo remove events on repeat refresh
-                    const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    if (a.name == "@touch:contextmenu")
-                        addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
-                    else {
-                        if (node[camelCased] instanceof TypedEvent) {
-                            (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
-                        } else {
-                            node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                    if (a.name.startsWith('css:')) {
+                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                        const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
+                        this._bindings[this._bindings.length - 1](true);
+                    } else if (a.name.startsWith('class:')) {
+                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                        const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
+                        this._bindings[this._bindings.length - 1](true);
+                    } else if (a.name == 'repeat-changed-item-callback') {
+                        //do nothing
+                    } else if (a.name.startsWith('repeat:')) {
+                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                        const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        const elementsCache: Node[] = [];
+                        let bindingIndexname = 'index';
+                        let changeItemCallback = null;
+                        const indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
+                        if (indexNameAttribute)
+                            bindingIndexname = indexNameAttribute.value;
+                        const changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
+                        if (changeItemCallbackAttribute)
+                            changeItemCallback = changeItemCallbackAttribute.value;
+                        this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context));
+                        this._bindings[this._bindings.length - 1](true);
+                    } else if (a.name.startsWith('@')) { //todo remove events on repeat refresh
+                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                        const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        if (a.name == "@touch:contextmenu")
+                            addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                        else {
+                            if (node[camelCased] instanceof TypedEvent) {
+                                (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                            } else {
+                                node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                            }
                         }
+                    } else {
+                        let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                        const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        let noNull = false;
+                        if (value.startsWith('?')) {
+                            value = value.substring(1);
+                            noNull = true;
+                        }
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
+                        this._bindings[this._bindings.length - 1](true);
                     }
-                } else if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                    const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    let noNull = false;
-                    if (value.startsWith('?')) {
-                        value = value.substring(1);
-                        noNull = true;
-                    }
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
-                    this._bindings[this._bindings.length - 1](true);
                 } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
                     const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                     let value = attributeValues[0];
@@ -235,7 +236,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         } else if (node.nodeType === 3) {
             if (node.nodeValue.indexOf('[[') >= 0) {
                 const text = node.nodeValue;
-                const matches = text.matchAll((<RegExp>(<any>this.constructor)._bindingRegex));
+                const matches = text.matchAll(_bindingRegex);
                 let lastindex = 0;
                 let fragment: DocumentFragment;
                 const trimmedLength = text.trim().length;
@@ -272,9 +273,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
 
         if (!(node instanceof HTMLTemplateElement)) {
-            let children = Array.from(node.childNodes);
-            for (let n of children) {
-                this._bindingsInternalParse(n, repeatBindingItems, removeAttributes, host, context);
+            for (let i = 0; i < node.childNodes.length; i++) {
+                this._bindingsInternalParse(node.childNodes[i], repeatBindingItems, removeAttributes, host, context);
             }
         }
     }
@@ -510,11 +510,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
-    
+
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super();
 
-        for (let p of Object.getOwnPropertyNames(this)) {            
+        for (let p of Object.getOwnPropertyNames(this)) {
             const val = this[p];
             delete this[p];
             this[p] = val;
