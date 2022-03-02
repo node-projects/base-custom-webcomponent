@@ -39,13 +39,6 @@ export const cssFromString = function (value: string): CSSStyleSheet {
     return cssStyleSheet;
 };
 
-export const cssAsync = async function (strings: TemplateStringsArray, ...values: any[]): Promise<CSSStyleSheet> {
-    const cssStyleSheet = new CSSStyleSheet();
-    //@ts-ignore
-    await cssStyleSheet.replace(toParString(strings, values));
-    return cssStyleSheet;
-};
-
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
 type propertyComplexDefinition = { type: propertySimpleDefinition; };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
