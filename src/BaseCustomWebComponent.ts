@@ -235,10 +235,15 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 const trimmedLength = text.trim().length;
                 for (let m of matches) {
                     if ((m[0].length == trimmedLength || (m.index == 0 && m[0].length == text.length)) && node.parentNode.childNodes.length == 1) {
-                        const value = m[0].substr(2, m[0].length - 4);
+                        let value = m[0].substr(2, m[0].length - 4);
                         const parent = node.parentNode;
                         node.parentNode.removeChild(node);
-                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                        let noNull = false;
+                        if (value.startsWith('?')) {
+                            value = value.substring(1);
+                            noNull = true;
+                        }
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
                         this._bindings[this._bindings.length - 1](true);
                     } else {
                         if (!fragment)
@@ -248,8 +253,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             fragment.appendChild(tn);
                         }
                         const newNode = document.createElement('span');
-                        const value = m[0].substr(2, m[0].length - 4);
-                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, false));
+                        let value = m[0].substr(2, m[0].length - 4);
+                        let noNull = false;
+                        if (value.startsWith('?')) {
+                            value = value.substring(1);
+                            noNull = true;
+                        }
+                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
                         this._bindings[this._bindings.length - 1](true);
                         fragment.appendChild(newNode);
                         lastindex = m.index + m[0].length;
@@ -403,7 +413,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
             }
         } catch (error) {
-            console.warn((<Error>error).message, 'Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
+            console.warn((<Error>error).message, ' - Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
         }
     }
 
@@ -413,7 +423,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (node.style[property] !== value)
                 node.style[property] = value;
         } catch (error) {
-            console.warn((<Error>error).message, 'Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
+            console.warn((<Error>error).message, ' - Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
         }
     }
 
