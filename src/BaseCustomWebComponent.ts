@@ -149,55 +149,80 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         this._bindingsInternalParse(node, null, removeAttributes, host, context);
     }
 
-    private _bindingsInternalParse(node: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
+    private _bindingsInternalParse(startNode: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
         if (!this._bindings)
             this._bindings = [];
-        if (!node)
-            node = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
-        if (node instanceof Element) { //node.nodeType === 1
-            const attributes = Array.from(node.attributes);
-            for (let a of attributes) {
-                if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
-                    if (a.name.startsWith('css:')) {
-                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                        const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                        this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
-                        this._bindings[this._bindings.length - 1](true);
-                    } else if (a.name.startsWith('class:')) {
-                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                        const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                        this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
-                        this._bindings[this._bindings.length - 1](true);
-                    } else if (a.name == 'repeat-changed-item-callback') {
-                        //do nothing
-                    } else if (a.name.startsWith('repeat:')) {
-                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                        const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                        const elementsCache: Node[] = [];
-                        let bindingIndexname = 'index';
-                        let changeItemCallback = null;
-                        const indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
-                        if (indexNameAttribute)
-                            bindingIndexname = indexNameAttribute.value;
-                        const changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
-                        if (changeItemCallbackAttribute)
-                            changeItemCallback = changeItemCallbackAttribute.value;
-                        this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context));
-                        this._bindings[this._bindings.length - 1](true);
-                    } else if (a.name.startsWith('@')) { //todo remove events on repeat refresh
-                        const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                        const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                        if (a.name == "@touch:contextmenu")
-                            addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
-                        else {
-                            if (node[camelCased] instanceof TypedEvent) {
-                                (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
-                            } else {
-                                node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+        if (!startNode)
+            startNode = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
+
+        const walker = document.createTreeWalker(startNode, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
+        let currNode = walker.nextNode();
+        let node: HTMLElement = <any>currNode;
+        while (node) {
+            node = <any>currNode;
+            if (!node)
+                break;
+            currNode = walker.nextNode();
+            console.log(node);
+            if (node.nodeType === 1) { //node.nodeType === 1
+                const attributes = Array.from(node.attributes);
+                for (let a of attributes) {
+                    if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                        if (a.name.startsWith('css:')) {
+                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            this._bindings.push(() => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
+                            this._bindings[this._bindings.length - 1](true);
+                        } else if (a.name.startsWith('class:')) {
+                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            this._bindings.push(() => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context));
+                            this._bindings[this._bindings.length - 1](true);
+                        } else if (a.name == 'repeat-changed-item-callback') {
+                            //do nothing
+                        } else if (a.name.startsWith('repeat:')) {
+                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            const elementsCache: Node[] = [];
+                            let bindingIndexname = 'index';
+                            let changeItemCallback = null;
+                            const indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
+                            if (indexNameAttribute)
+                                bindingIndexname = indexNameAttribute.value;
+                            const changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
+                            if (changeItemCallbackAttribute)
+                                changeItemCallback = changeItemCallbackAttribute.value;
+                            this._bindings.push(() => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context));
+                            this._bindings[this._bindings.length - 1](true);
+                        } else if (a.name.startsWith('@')) { //todo remove events on repeat refresh
+                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            if (a.name == "@touch:contextmenu")
+                                addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                            else {
+                                if (node[camelCased] instanceof TypedEvent) {
+                                    (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                } else {
+                                    node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                }
                             }
+                        } else {
+                            let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            let noNull = false;
+                            if (value.startsWith('?')) {
+                                value = value.substring(1);
+                                noNull = true;
+                            }
+                            this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
+                            this._bindings[this._bindings.length - 1](true);
                         }
-                    } else {
-                        let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                    } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
+                        const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
+                        let value = attributeValues[0];
+                        let event = 'input';
+                        if (attributeValues.length > 1 && attributeValues[1])
+                            event = attributeValues[1];
                         const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                         let noNull = false;
                         if (value.startsWith('?')) {
@@ -206,78 +231,58 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         }
                         this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
                         this._bindings[this._bindings.length - 1](true);
-                    }
-                } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
-                    const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
-                    let value = attributeValues[0];
-                    let event = 'input';
-                    if (attributeValues.length > 1 && attributeValues[1])
-                        event = attributeValues[1];
-                    const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                    let noNull = false;
-                    if (value.startsWith('?')) {
-                        value = value.substring(1);
-                        noNull = true;
-                    }
-                    this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull));
-                    this._bindings[this._bindings.length - 1](true);
-                    if (event) {
-                        event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
+                        if (event) {
+                            event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
+                        }
                     }
                 }
-            }
-        } else if (node.nodeType === 3) {
-            if (node.nodeValue.indexOf('[[') >= 0) {
-                const text = node.nodeValue;
-                const matches = text.matchAll(_bindingRegex);
-                let lastindex = 0;
-                let fragment: DocumentFragment;
-                const trimmedLength = text.trim().length;
-                for (let m of matches) {
-                    if ((m[0].length == trimmedLength || (m.index == 0 && m[0].length == text.length)) && node.parentNode.childNodes.length == 1) {
-                        let value = m[0].substr(2, m[0].length - 4);
-                        const parent = node.parentNode;
-                        node.parentNode.removeChild(node);
-                        let noNull = false;
-                        if (value.startsWith('?')) {
-                            value = value.substring(1);
-                            noNull = true;
+            } else if (node.nodeType === 3) {
+                if (node.nodeValue.indexOf('[[') >= 0) {
+                    const text = node.nodeValue;
+                    const matches = text.matchAll(_bindingRegex);
+                    let lastindex = 0;
+                    let fragment: DocumentFragment;
+                    const trimmedLength = text.trim().length;
+                    for (let m of matches) {
+                        if ((m[0].length == trimmedLength || (m.index == 0 && m[0].length == text.length)) && node.parentNode.childNodes.length == 1) {
+                            let value = m[0].substr(2, m[0].length - 4);
+                            const parent = node.parentNode;
+                            node.parentNode.removeChild(node);
+                            let noNull = false;
+                            if (value.startsWith('?')) {
+                                value = value.substring(1);
+                                noNull = true;
+                            }
+                            this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
+                            this._bindings[this._bindings.length - 1](true);
+                        } else {
+                            if (!fragment)
+                                fragment = document.createDocumentFragment();
+                            if (m.index - lastindex > 0) {
+                                const tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
+                                fragment.appendChild(tn);
+                            }
+                            const newNode = document.createElement('span');
+                            let value = m[0].substr(2, m[0].length - 4);
+                            let noNull = false;
+                            if (value.startsWith('?')) {
+                                value = value.substring(1);
+                                noNull = true;
+                            }
+                            this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
+                            this._bindings[this._bindings.length - 1](true);
+                            fragment.appendChild(newNode);
+                            lastindex = m.index + m[0].length;
                         }
-                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
-                        this._bindings[this._bindings.length - 1](true);
-                    } else {
-                        if (!fragment)
-                            fragment = document.createDocumentFragment();
-                        if (m.index - lastindex > 0) {
-                            const tn = document.createTextNode(text.substr(lastindex, m.index - lastindex));
+                    }
+                    if (fragment) {
+                        if (lastindex > 0 && text.length - lastindex > 0) {
+                            let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
                             fragment.appendChild(tn);
                         }
-                        const newNode = document.createElement('span');
-                        let value = m[0].substr(2, m[0].length - 4);
-                        let noNull = false;
-                        if (value.startsWith('?')) {
-                            value = value.substring(1);
-                            noNull = true;
-                        }
-                        this._bindings.push((firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull));
-                        this._bindings[this._bindings.length - 1](true);
-                        fragment.appendChild(newNode);
-                        lastindex = m.index + m[0].length;
+                        node.parentNode.replaceChild(fragment, node);
                     }
                 }
-                if (fragment) {
-                    if (lastindex > 0 && text.length - lastindex > 0) {
-                        let tn = document.createTextNode(text.substr(lastindex, text.length - lastindex));
-                        fragment.appendChild(tn);
-                    }
-                    node.parentNode.replaceChild(fragment, node);
-                }
-            }
-        }
-
-        if (!(node instanceof HTMLTemplateElement)) {
-            for (let i = 0; i < node.childNodes.length; i++) {
-                this._bindingsInternalParse(node.childNodes[i], repeatBindingItems, removeAttributes, host, context);
             }
         }
     }
