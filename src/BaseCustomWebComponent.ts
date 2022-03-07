@@ -81,6 +81,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     protected _bindings: ((firstRun?: boolean) => void)[];
     protected _repeatWeakMap: WeakMap<any, Element[]>;
+    protected _rootDocumentFragment: DocumentFragment;
+    protected _initialPropertyCache = new Map<string, any>();
 
     protected _getDomElement<T extends Element>(id: string): T {
         if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
@@ -157,13 +159,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
         const walker = document.createTreeWalker(startNode, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
         let currNode = walker.nextNode();
-        let node: HTMLElement = <any>currNode;
-        while (node) {
-            node = <any>currNode;
-            if (!node)
+        let loopNode: HTMLElement = <any>currNode;
+        while (loopNode) {
+            loopNode = <any>currNode;
+            if (!loopNode)
                 break;
             currNode = walker.nextNode();
-            console.log(node);
+            let node = loopNode;
             if (node.nodeType === 1) { //node.nodeType === 1
                 const attributes = Array.from(node.attributes);
                 for (let a of attributes) {
@@ -516,17 +518,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         await Promise.all(Array.from(this.shadowRoot.querySelectorAll(':not(:defined)'), n => customElements.whenDefined(n.localName)));
     }
 
-    protected _rootDocumentFragment: DocumentFragment;
-    protected _initialPropertyCache = new Map<string, any>();
-
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super();
-
-        for (let p of Object.getOwnPropertyNames(this)) {
-            const val = this[p];
-            delete this[p];
-            this[p] = val;
-        }
 
         this.attachShadow({ mode: 'open' });
 
@@ -559,13 +552,27 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 //@ts-ignore
                 this.shadowRoot.adoptedStyleSheets = [this.constructor.style];
         }
+
+        for (let p of Object.getOwnPropertyNames(this)) {
+            if (p !== '_bindings' && p !== '_repeatWeakMap' && p !== '_initialPropertyCache' && p !== '_rootDocumentFragment')
+                this._initialPropertyCache.set(p, this[p]);
+        }
     }
 }
 
 export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style)
+        super(template, style);
+
         queueMicrotask(() => {
+            if (this._initialPropertyCache) {
+                this._initialPropertyCache!.forEach((v, p) => {
+                    delete this[p];
+                    this[p] = v;
+                });
+                this._initialPropertyCache = undefined;
+            }
+
             if (this._rootDocumentFragment)
                 this.shadowRoot.appendChild(this._rootDocumentFragment);
             //@ts-ignore
@@ -585,12 +592,19 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
 
 export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style)
+        super(template, style);
 
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
         queueMicrotask(() => {
+            if (this._initialPropertyCache) {
+                this._initialPropertyCache!.forEach((v, p) => {
+                    delete this[p];
+                    this[p] = v;
+                });
+                this._initialPropertyCache = undefined;
+            }
 
             //@ts-ignore
             if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
@@ -609,11 +623,19 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
 
 export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style)
+        super(template, style);
+
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
         requestAnimationFrame(() => {
+            if (this._initialPropertyCache) {
+                this._initialPropertyCache!.forEach((v, p) => {
+                    delete this[p];
+                    this[p] = v;
+                });
+                this._initialPropertyCache = undefined;
+            }
 
             //@ts-ignore
             if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
@@ -626,6 +648,6 @@ export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustom
             if (this.ready)
                 //@ts-ignore
                 this.ready();
-        })
+        });
     }
 }
