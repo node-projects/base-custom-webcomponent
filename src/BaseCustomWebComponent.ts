@@ -507,16 +507,32 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    /*attributeChangedCallback(name, oldValue, newValue) {
-      //@ts-ignore
-      if (this.constructor._propertiesDictionary) {
-        this._parseAttributesToProperties();
-      }
-    }*/
-
     protected async _waitForChildrenReady() {
         await Promise.all(Array.from(this.shadowRoot.querySelectorAll(':not(:defined)'), n => customElements.whenDefined(n.localName)));
     }
+
+    protected _restoreCachedInititalValues() {
+        if (this._initialPropertyCache) {
+            for (const e of this._initialPropertyCache.entries()) {
+                delete this[e[0]];
+                this[e[0]] = e[1];
+            }
+        }
+        this._initialPropertyCache = undefined;
+    }
+
+    protected _restoreCachedInititalValue(name: string) {
+        if (this._initialPropertyCache) {
+            if (this._initialPropertyCache.has(name)) {
+                delete this[name];
+                this[name] = this._initialPropertyCache.get(name);
+                this._initialPropertyCache.delete(name)
+            }
+        }
+        if (!this._initialPropertyCache.size)
+            this._initialPropertyCache = undefined;
+    }
+
 
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super();
@@ -553,9 +569,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 this.shadowRoot.adoptedStyleSheets = [this.constructor.style];
         }
 
-        for (let p of Object.getOwnPropertyNames(this)) {
-            if (p !== '_bindings' && p !== '_repeatWeakMap' && p !== '_initialPropertyCache' && p !== '_rootDocumentFragment')
-                this._initialPropertyCache.set(p, this[p]);
+        //@ts-ignore
+        if (this.constructor.properties) {
+            //@ts-ignore
+            for (let p in this.constructor.properties) {
+                if (this.hasOwnProperty(p))
+                    this._initialPropertyCache.set(p, this[p]);
+            }
         }
     }
 }
@@ -565,14 +585,6 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
         super(template, style);
 
         queueMicrotask(() => {
-            if (this._initialPropertyCache) {
-                this._initialPropertyCache!.forEach((v, p) => {
-                    delete this[p];
-                    this[p] = v;
-                });
-                this._initialPropertyCache = undefined;
-            }
-
             if (this._rootDocumentFragment)
                 this.shadowRoot.appendChild(this._rootDocumentFragment);
             //@ts-ignore
@@ -594,18 +606,7 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super(template, style);
 
-        if (this._rootDocumentFragment)
-            this.shadowRoot.appendChild(this._rootDocumentFragment);
-
         queueMicrotask(() => {
-            if (this._initialPropertyCache) {
-                this._initialPropertyCache!.forEach((v, p) => {
-                    delete this[p];
-                    this[p] = v;
-                });
-                this._initialPropertyCache = undefined;
-            }
-
             //@ts-ignore
             if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
                 //@ts-ignore
@@ -617,7 +618,10 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
             if (this.ready)
                 //@ts-ignore
                 this.ready();
-        })
+        });
+
+        if (this._rootDocumentFragment)
+            this.shadowRoot.appendChild(this._rootDocumentFragment);
     }
 }
 
@@ -629,14 +633,6 @@ export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustom
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
         requestAnimationFrame(() => {
-            if (this._initialPropertyCache) {
-                this._initialPropertyCache!.forEach((v, p) => {
-                    delete this[p];
-                    this[p] = v;
-                });
-                this._initialPropertyCache = undefined;
-            }
-
             //@ts-ignore
             if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
                 //@ts-ignore
