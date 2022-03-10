@@ -158,7 +158,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             startNode = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
 
         const walker = document.createTreeWalker(startNode, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
-        let currNode = walker.nextNode();
+        let currNode : Node = startNode;
         let loopNode: HTMLElement = <any>currNode;
         while (loopNode) {
             loopNode = <any>currNode;
