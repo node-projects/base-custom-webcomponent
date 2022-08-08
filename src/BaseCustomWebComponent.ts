@@ -370,7 +370,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
 
                     if (callback) {
-                        intRepeatBindingItems.push({ name: 'nodes', item: nd.children });
+                        intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
                         intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
                         let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
                         if (nds === undefined)
