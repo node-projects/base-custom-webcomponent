@@ -158,7 +158,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             startNode = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
 
         const walker = document.createTreeWalker(startNode, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
-        let currNode : Node = startNode;
+        let currNode: Node = startNode;
         let loopNode: HTMLElement = <any>currNode;
         while (loopNode) {
             loopNode = <any>currNode;
@@ -533,9 +533,35 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             this._initialPropertyCache = undefined;
     }
 
+    static instanceCreatedCallback: (i: BaseCustomWebComponentNoAttachedTemplate) => void;
 
+    _hmrCallback(newClass: BaseCustomWebComponentNoAttachedTemplate) {
+        let oldIdx = -1;
+        //@ts-ignore
+        if (this.constructor.style) {
+            //@ts-ignore
+            oldIdx = this.shadowRoot.adoptedStyleSheets.indexOf(this.constructor.style);
+            if (oldIdx >= 0) {
+                let newArr = Array.from(this.shadowRoot.adoptedStyleSheets);
+                newArr.splice(oldIdx, 1);
+                this.shadowRoot.adoptedStyleSheets = newArr;
+            }
+        }
+        if (newClass.style) {
+            if (oldIdx >= 0) {
+                let newArr = Array.from(this.shadowRoot.adoptedStyleSheets);
+                //@ts-ignore
+                newArr.splice(oldIdx, 0, newClass.style);
+                this.shadowRoot.adoptedStyleSheets = newArr;
+            }
+        }
+    }
+    
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super();
+
+        if (BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback)
+            BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback(this);
 
         this.attachShadow({ mode: 'open' });
 
