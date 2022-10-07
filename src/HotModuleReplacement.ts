@@ -1,42 +1,28 @@
 import { BaseCustomWebComponentNoAttachedTemplate } from "./BaseCustomWebComponent";
 
+export function getFunctionType(x) {
+    return typeof x === 'function'
+        ? x.prototype
+            ? Object.getOwnPropertyDescriptor(x, 'prototype').writable
+                ? 'function'
+                : 'class'
+            : x.constructor.name === 'AsyncFunction'
+                ? 'async'
+                : 'arrow'
+        : '';
+}
+
 export class HotModuleReplacement {
 
     private static changesFetcher: () => Promise<string[]>;
 
     private static instances: WeakRef<any>[] = [];
-    private static classes = new Set();
 
     public static initHMR(fetchChangedFiles: () => Promise<string[]>) {
         HotModuleReplacement.changesFetcher = fetchChangedFiles;
-
-        let customElementsRegistry = window.customElements;
-        const registry: any = {};
-        registry.define = function (name, constructor, options) {
-            HotModuleReplacement.classes.add(constructor);
-            customElementsRegistry.define(name, constructor, options);
-        }
-        registry.get = function (name) {
-            return customElementsRegistry.get(name);
-        }
-        registry.upgrade = function (node) {
-            return customElementsRegistry.upgrade(node);
-        }
-        registry.whenDefined = function (name) {
-            return customElementsRegistry.whenDefined(name);
-        }
-
-        Object.defineProperty(window, "customElements", {
-            get() {
-                return registry
-            }
-        });
-
         BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback = (i) => {
             HotModuleReplacement.instances.push(new WeakRef(i));
-            HotModuleReplacement.classes.add(i.constructor);
         }
-
         HotModuleReplacement.startPolling();
     }
 
@@ -75,86 +61,71 @@ export class HotModuleReplacement {
         }
     }
     static async reloadJs(file: string) {
+        let oldModule = await import(file);
+
         let oldDefine = customElements.define
         customElements.define = () => null;
-        let imported_modules = await import(file + "?reload=" + new Date().getTime());
+        let newModule = await import(file + "?reload=" + new Date().getTime());
         customElements.define = oldDefine;
 
-        let changedElements = []
-        for (let module in imported_modules) {
-            changedElements.push(imported_modules[module])
-        }
-
-        for (let element of changedElements) {
-            let i = HotModuleReplacement.instances.length;
-            while (i--) {
-                let instanceRef = HotModuleReplacement.instances[i];
-                let instance = instanceRef.deref();
-                if (instance) {
-                    if (element.name == instance.constructor.name) {
-                        instance._hmrCallback(element);
+        for (let nameOfexport in newModule) {
+            const classExport = newModule[nameOfexport];
+            if (getFunctionType(classExport) == 'class') {
+                let i = HotModuleReplacement.instances.length;
+                while (i--) {
+                    let instanceRef = HotModuleReplacement.instances[i];
+                    let instance = instanceRef.deref();
+                    if (instance) {
+                        if (classExport.name == instance.constructor.name) {
+                            if (instance._hmrCallback)
+                                instance._hmrCallback(classExport);
+                        }
+                    } else {
+                        HotModuleReplacement.instances.splice(i, 1);
                     }
-                } else {
-                    HotModuleReplacement.instances.splice(i, 1);
                 }
             }
         }
 
-        HotModuleReplacement.classes.forEach((c) => {
-            for (let element of changedElements) {
-                //@ts-ignore
-                if (c.name == element.name) {
-
+        for (let nameOfexport in oldModule) {
+            const oExport = oldModule[nameOfexport];
+            if (getFunctionType(oExport) == 'class') {
+                const newExport = newModule[nameOfexport];
+                if (newExport) {
                     // Gets all attribute-properties of class
-                    let properties = Object.getOwnPropertyNames(c);
+                    let properties = Object.getOwnPropertyNames(oExport);
 
                     for (let property of properties) {
                         if (property == 'prototype' || property == 'name' || property == 'length') continue;
-                        delete c[property];
+                        delete oExport[property];
                         try {
-                            c[property] = element[property];
-                            //@ts-ignore
-                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + c.name + "'", err); }
+                            oExport[property] = newExport[property];
+                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + oExport.name + "'", err); }
                     }
 
-                    //@ts-ignore
-                    // Gets properties of prototype, including functions of class
-                    properties = Object.getOwnPropertyNames(c.prototype);
-
+                    properties = Object.getOwnPropertyNames(oExport.prototype);
                     for (let property of properties) {
                         if (property == 'prototype' || property == 'name' || property == 'length') continue;
-                        delete c[property];
+                        delete oExport[property];
                         try {
-                            //@ts-ignore
-                            c.prototype[property] = element.prototype[property];
-                            //@ts-ignore
-                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + c.name + "'", err); }
+                            oExport.prototype[property] = newExport.prototype[property];
+                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + oExport.name + "'", err); }
                     }
                 }
             }
-        });
+        }
     }
 
     // Change the url of the stylesheet to force a reload
-    private static reloadCss(file: string) {
-        for (let styleSheet of HotModuleReplacement.queryStyleSheets()) {
-            if (styleSheet.includes(file.split("?")[0])) {
-                // attribute href in Link-Element does not contain Base-Uri
-                let link = document.querySelectorAll<HTMLLinkElement>(`link[href*="${file}"]`)[0];
-                if (link) {
-                    link.href = link.href.split("?")[0] + "?reload=" + new Date().getTime();
-                }
-            }
-        }
-    }
+    private static async reloadCss(file: string) {
+        const newId = new Date().getTime();
+        for (let link of document.querySelectorAll<HTMLLinkElement>(`link[href*="${file}"]`))
+            link.href = link.href.split("?")[0] + "?reload=" + newId;
 
-    private static queryStyleSheets() {
-        let list = document.querySelectorAll<HTMLLinkElement>("link[rel=stylesheet]");
-        let styleSheets = []
-        for (let element of list) {
-            styleSheets.push(element.href);
-        }
-
-        return styleSheets
+        const oldCssModule = await import(file, { assert: { type: 'css' } });
+        const newCssModule = await import(file + "?reload=" + newId, { assert: { type: 'css' } });
+        const oldStylesheet: CSSStyleSheet = oldCssModule.default;
+        const newStylesheet: CSSStyleSheet = newCssModule.default;
+        oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
     }
 } 
