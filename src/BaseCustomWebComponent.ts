@@ -240,7 +240,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         this._bindings.push([b, null]);
                         b(true);
                         if (event) {
-                            event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(this, value, (<HTMLInputElement>node)[camelCased])));
+                            event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value, (<HTMLInputElement>node)[camelCased], context)));
                         }
                     }
                 }
@@ -463,27 +463,31 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             this._bindings.forEach(x => x[0](false));
     }
 
-    protected _bindingsSetValue(obj, path: string, value) {
+    protected _bindingsSetValue(obj, path: string, value, context) {
         if (path === undefined || path === null) {
             return;
         }
 
+        let target = obj;
         if (path.startsWith('this.')) {
             path = path.substr(5);
+        } else {
+            target = context;
         }
+
         const pathParts = path.split('.');
         for (let i = 0; i < pathParts.length - 1; i++) {
-            if (obj != null) {
-                let newObj = obj[pathParts[i]];
+            if (target != null) {
+                let newObj = target[pathParts[i]];
                 if (newObj == null) {
                     newObj = {};
-                    obj[pathParts[i]] = newObj;
+                    target[pathParts[i]] = newObj;
                 }
-                obj = newObj;
+                target = newObj;
             }
         }
 
-        obj[pathParts[pathParts.length - 1]] = value;
+        target[pathParts[pathParts.length - 1]] = value;
     }
 
     //@ts-ignore
