@@ -233,14 +233,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                         let noNull = false;
                         if (value.startsWith('?')) {
+                            value = value.substring(1);
                             noNull = true;
                         }
-                        value = value.replaceAll('?', '');
                         const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull);
                         this._bindings.push([b, null]);
                         b(true);
                         if (event) {
-                            event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value, (<HTMLInputElement>node)[camelCased], context)));
+                            event.split(';').forEach(x => node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context)));
                         }
                     }
                 }
