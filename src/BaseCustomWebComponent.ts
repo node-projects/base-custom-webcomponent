@@ -84,6 +84,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     protected _repeatWeakMap: WeakMap<any, Element[]>;
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
+    protected _noWarningOnBindingErrors;
 
     protected _getDomElement<T extends Element>(id: string): T {
         if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
@@ -395,7 +396,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
             }
         } catch (error) {
-            console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
+            if (!this._noWarningOnBindingErrors)
+                console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
         }
     }
 
@@ -428,7 +430,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
             }
         } catch (error) {
-            console.warn((<Error>error).message, ' - Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
+            if (!this._noWarningOnBindingErrors)
+                console.warn((<Error>error).message, ' - Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
         }
     }
 
@@ -438,7 +441,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (node.style[property] !== value)
                 node.style[property] = value;
         } catch (error) {
-            console.warn((<Error>error).message, ' - Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
+            if (!this._noWarningOnBindingErrors)
+                console.warn((<Error>error).message, ' - Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
         }
     }
 
@@ -454,7 +458,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     node.classList.remove(classname);
             }
         } catch (error) {
-            console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', node);
+            if (!this._noWarningOnBindingErrors)
+                console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', node);
         }
     }
 
@@ -510,9 +515,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 if (pair[1] === Boolean)
                     this[pair[0]] = true;
                 else if (pair[1] === Object) {
-                    if (!a.value.startsWith("{{") && !a.value.startsWith("[["))
+                    if (!a.value.startsWith("{{") && !a.value.startsWith("[[")) //cause of this Array in Array Json Values are not possible atm.
                         this[pair[0]] = JSON.parse(a.value);
                 }
+                else if (pair[1] === Number)
+                    this[pair[0]] = parseFloat(a.value);
                 else
                     this[pair[0]] = a.value;
             }
