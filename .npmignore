@@ -1,2 +1,7 @@
 /node_modules
+/src
 /.vs
+/.github
+tsconfig.json
+debug.log
+.editorconfig
