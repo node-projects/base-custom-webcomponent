@@ -32,6 +32,19 @@ All the features are not enabled by default for performance reasons but you can 
  - this._assignEvents(); ==> parses @event bindings to callbacks in class
  - this._bindingsParse(); ==> parses and enables bindings
 
+## Hot Reload
+
+The Library supports Hotreload of Components created with it. This works mostly for the Templates and the Styles, for Javascript, it depends. Best is, if you try it yourself.
+
+To use it, try following snippet:
+
+```
+HotModuleReplacement.initHMR(async () => {
+    ...replace this with a function wich returns a list of your changed files, 
+    or null if no files have changed since the last call, this function will be called every 100ms...
+});
+```
+
 ## Bindings
 
 The Bindings are heavily inspired by polymer
