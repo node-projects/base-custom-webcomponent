@@ -40,8 +40,12 @@ To use it, try following snippet:
 
 ```
 HotModuleReplacement.initHMR(async () => {
-    ...replace this with a function wich returns a list of your changed files, 
-    or null if no files have changed since the last call, this function will be called every 100ms...
+    ...
+    replace this with a function wich returns a list of your changed files, 
+    or null if no files have changed since the last call, this function will be called every 100ms
+    so this function for example could ask the dev server wich files have changed, and return them.
+    The hotmodulereplacment will then try to reload them (If possible)
+    ...
 });
 ```
 
