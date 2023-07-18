@@ -171,7 +171,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (node.nodeType === 1) { //node.nodeType === 1
                 const attributes = Array.from(node.attributes);
                 for (let a of attributes) {
-                    if (a.value.startsWith('[[') && a.value.endsWith(']]')) {
+                    if (a.value[0] === '[' && a.value[1] === '[' && a.value[a.value.length - 1] === ']' && a.value[a.value.length - 2] === ']') {
                         if (a.name.startsWith('css:')) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -201,7 +201,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const b = () => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context);
                             this._bindings.push([b, null]);
                             b();
-                        } else if (a.name.startsWith('@')) { //todo remove events on repeat refresh
+                        } else if (a.name[0] === '@') { //todo remove events on repeat refresh
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             if (a.name == "@touch:contextmenu")
@@ -217,7 +217,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             let noNull = false;
-                            if (value.startsWith('?')) {
+                            if (value[0] === '?') {
                                 value = value.substring(1);
                                 noNull = true;
                             }
@@ -225,7 +225,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             this._bindings.push([b, null]);
                             b(true);
                         }
-                    } else if (a.value.startsWith('{{') && a.value.endsWith('}}')) {
+                    } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
                         const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                         let value = attributeValues[0];
                         let event = 'input';
@@ -233,7 +233,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             event = attributeValues[1];
                         const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                         let noNull = false;
-                        if (value.startsWith('?')) {
+                        if (value[0] === '?') {
                             value = value.substring(1);
                             noNull = true;
                         }
@@ -254,17 +254,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     const trimmedLength = text.trim().length;
                     for (let m of matches) {
                         if ((m[0].length == trimmedLength || (m.index == 0 && m[0].length == text.length)) && node.parentNode.childNodes.length == 1) {
-                            let value = m[0].substr(2, m[0].length - 4);
                             const parent = node.parentNode;
                             node.parentNode.removeChild(node);
-                            let noNull = false;
-                            if (value.startsWith('?')) {
-                                value = value.substring(1);
-                                noNull = true;
-                            }
-                            const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, parent, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull);
-                            this._bindings.push([b, null]);
-                            b(true);
+                            this._textFragmentBinding(parent, m, repeatBindingItems, removeAttributes, host, context);
                         } else {
                             if (!fragment)
                                 fragment = document.createDocumentFragment();
@@ -273,15 +265,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 fragment.appendChild(tn);
                             }
                             const newNode = document.createElement('span');
-                            let value = m[0].substr(2, m[0].length - 4);
-                            let noNull = false;
-                            if (value.startsWith('?')) {
-                                value = value.substring(1);
-                                noNull = true;
-                            }
-                            const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, newNode, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull);
-                            this._bindings.push([b, null]);
-                            b(true);
+                            this._textFragmentBinding(newNode, m, repeatBindingItems, removeAttributes, host, context);
                             fragment.appendChild(newNode);
                             lastindex = m.index + m[0].length;
                         }
@@ -296,6 +280,18 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
             }
         }
+    }
+
+    private _textFragmentBinding(node: Node, m: RegExpMatchArray, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
+        let value = m[0].substr(2, m[0].length - 4);
+        let noNull = false;
+        if (value[0] === '?') {
+            value = value.substring(1);
+            noNull = true;
+        }
+        const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull);
+        this._bindings.push([b, null]);
+        b(true);
     }
 
     private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, host: any, context: any) {
