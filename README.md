@@ -186,35 +186,40 @@ The ready method will be called, when the component is connected the first time.
 
   ```
     {
-	    "basecustomwebcomponent": {
-    		"prefix": "bcwc",
-    		"body": [
-    			"import { BaseCustomWebComponentConstructorAppend, html, css } from '@node-projects/base-custom-webcomponent';\n",
-    			"export class ${1:${TM_FILENAME_BASE}} extends BaseCustomWebComponentConstructorAppend {\n",
-    			"\tstatic readonly template = html`",
-    			"\t\t",
-    			"\t`;\n",
-    			"\tstatic readonly style = css`",
-    			"\t\t:host {",
-    			"\t\t\tbox-sizing: border-box;",
-    			"\t\t}`;\n",
-    			"\tstatic readonly is = '${1/(^[A-Z])|(?<=[a-z0-9A-Z])([A-Z])/${1:/downcase}${2:+-}${2:/downcase}/g}';\n",
-    			"\tstatic readonly properties = {",
-    			"\t\t\t",
-    			"\t}\n",
-    			"\tconstructor() {",
-    			"\t\tsuper();",
-    			"\t\tsuper._restoreCachedInititalValues();",
-    			"\t}\n",
-    			"\tready() {",
-    			"\t\tthis._parseAttributesToProperties();",
-    			"\t\tthis._assignEvents();",
-    			"\t}",
-    			"}",
-    			"customElements.define(${1}.is, ${1})",
-    		],
-    		"description": "Sample template for the BaseCustomWebComponent"
-	    }
+    	"basecustomwebcomponent": {
+            "prefix": "bcwc",
+            "body": [
+                "import { BaseCustomWebComponentConstructorAppend, html, css } from '@node-projects/base-custom-webcomponent';\n",
+                "export class ${1:${TM_FILENAME_BASE}} extends BaseCustomWebComponentConstructorAppend {\n",
+                "\tstatic readonly template = html`",
+                "\t\t",
+                "\t`;\n",
+                "\tstatic readonly style = css`",
+                "\t\t:host {",
+                "\t\t\tdisplay: block;",
+                "\t\t\tbox-sizing: border-box;",
+                "\t\t}",
+                "\t\t:host([hidden]) {",
+                "\t\t\tdisplay: none;",
+                "\t\t}",
+                "\t`;\n",
+                "\tstatic readonly is = '${1/(^[A-Z])|(?<=[a-z0-9A-Z])([A-Z])/${1:/downcase}${2:+-}${2:/downcase}/g}';\n",
+                "\tstatic readonly properties = {",
+                "\t\t\t",
+                "\t}\n",
+                "\tconstructor() {",
+                "\t\tsuper();",
+                "\t\tsuper._restoreCachedInititalValues();",
+                "\t}\n",
+                "\tready() {",
+                "\t\tthis._parseAttributesToProperties();",
+                "\t\tthis._assignEvents();",
+                "\t}",
+                "}",
+                "customElements.define(${1}.is, ${1})",
+            ],
+            "description": "Sample template for the BaseCustomWebComponent"
+        }
     }
   ```
 * Save and type "bcwc" and press tap inside an empty file
