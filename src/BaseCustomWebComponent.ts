@@ -382,11 +382,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             nds = nd.children;
                         if (nds) {
                             for (let n of Array.from(nds))
-                                node.parentNode.appendChild(<Node>n);
+                                node.parentNode.insertBefore(<Node>n, node);
                         }
                     }
                     else {
-                        node.parentNode.appendChild(nd);
+                        node.parentNode.insertBefore(nd, node);
                     }
                     i++;
                 }
