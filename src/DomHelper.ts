@@ -28,13 +28,13 @@ export class DomHelper {
         return null;
     }
 
-    static removeAllChildnodes(node: Node, className?: string) {
-        if (!className) {
+    static removeAllChildnodes(node: Node, selector?: string) {
+        if (!selector) {
             for (let c = node.firstChild; c !== null; c = node.firstChild) {
                 node.removeChild(c);
             }
         } else {
-            const elements = (<HTMLElement>node).querySelectorAll('.' + className);
+            const elements = (<HTMLElement>node).querySelectorAll(selector);
             for (const e of elements) {
                 if (e.parentNode == node)
                     node.removeChild(e);
@@ -57,11 +57,7 @@ export class DomHelper {
     }
 
     static getHost(node: Node) {
-        while (node.parentElement)
-            node = node.parentElement;
-        if ((<ShadowRoot>node).host)
-            return (<ShadowRoot>node).host
-        return (<ShadowRoot>node.parentNode).host;
+        return (<ShadowRoot>node.getRootNode())?.host;
     }
 
     static nodeIsChildOf(node: Node, parentNode: Node) {
