@@ -241,7 +241,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         this._bindings.push([b, null]);
                         b(true);
                         if (event) {
-                            for (let x in event.split(';')) {
+                            for (let x of event.split(';')) {
                                 if (node[x] instanceof TypedEvent)
                                     (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context));
                                 else
