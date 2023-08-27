@@ -351,23 +351,24 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
-            if (values) {
-                if (callback) {
-                    if (callback.startsWith('[[') && callback.endsWith(']]'))
-                        callback = callback.substring(2, callback.length - 2);
-                    else
-                        callback = "this." + callback;
+            if (callback) {
+                if (callback.startsWith('[[') && callback.endsWith(']]'))
+                    callback = callback.substring(2, callback.length - 2);
+                else
+                    callback = "this." + callback;
+            }
+            for (let c of elementsCache) { // todo bindings of childs need to be killed
+                if (c.parentNode) {
+                    let intRepeatBindingItems: repeatBindingItem[] = [];
+                    intRepeatBindingItems.push({ name: 'nodes', item: [c] });
+                    intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
+                    this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                    c.parentNode.removeChild(c);
                 }
+            }
 
-                for (let c of elementsCache) { // todo bindings of childs need to be killed
-                    if (c.parentNode) {
-                        let intRepeatBindingItems: repeatBindingItem[] = [];
-                        intRepeatBindingItems.push({ name: 'nodes', item: [c] });
-                        intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
-                        this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
-                        c.parentNode.removeChild(c);
-                    }
-                }
+            if (values) {
+                //todo -> copy values to compare and only generate new controls...
                 let i = 0;
                 for (let e of values) {
                     let intRepeatBindingItems: repeatBindingItem[] = [];
