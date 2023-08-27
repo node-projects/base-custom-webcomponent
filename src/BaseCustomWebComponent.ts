@@ -365,6 +365,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
                     c.parentNode.removeChild(c);
                 }
+                elementsCache.length = 0;
             }
 
             if (values) {
