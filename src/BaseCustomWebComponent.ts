@@ -493,7 +493,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             } else {
                 if (repeatBindingItems) {
                     let p = pathParts[i];
-                    target = repeatBindingItems.find(x => x.name == p);
+                    target = repeatBindingItems.find(x => x.name == p).item;
                 }
 
             }
