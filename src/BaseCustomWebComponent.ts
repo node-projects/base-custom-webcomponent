@@ -243,9 +243,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (event) {
                             for (let x of event.split(';')) {
                                 if (node[x] instanceof TypedEvent)
-                                    (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context));
+                                    (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
                                 else
-                                    node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context));
+                                    node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
                             }
                         }
                     }
@@ -469,7 +469,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             this._bindings.forEach(x => x[0](false));
     }
 
-    protected _bindingsSetValue(obj, path: string, value, context) {
+    protected _bindingsSetValue(obj, path: string, value: any, context: any, repeatBindingItems?: repeatBindingItem[]) {
         if (path === undefined || path === null) {
             return;
         }
@@ -490,6 +490,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     target[pathParts[i]] = newObj;
                 }
                 target = newObj;
+            } else {
+                if (repeatBindingItems) {
+                    let p = pathParts[i];
+                    target = repeatBindingItems.find(x => x.name == p);
+                }
+
             }
         }
 
