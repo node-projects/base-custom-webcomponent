@@ -68,4 +68,40 @@ export class DomHelper {
         }
         return false;
     }
+
+    static findParentNodeOfWithLocalName(element, localName: string) {
+        let el = element;
+        while (true) {
+            if (el.parentElement != null) {
+                el = el.parentElement;
+            } else if (el.parentNode != null && el.parentNode.host != null) {
+                el = el.parentNode.host;
+            } else {
+                break;
+            }
+
+            if (el.localName == localName) {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    static findParentNodeOfType<T>(element, type: new (...args: any[]) => T): T {
+        let el = element;
+        while (true) {
+            if (el.parentElement != null) {
+                el = el.parentElement;
+            } else if (el.parentNode != null && el.parentNode.host != null) {
+                el = el.parentNode.host;
+            } else {
+                break;
+            }
+
+            if (el instanceof type) {
+                return el;
+            }
+        }
+        return null;
+    }
 }
