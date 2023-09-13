@@ -32,7 +32,9 @@ export const css = function (strings: TemplateStringsArray, ...values: any[]): C
     return cssStyleSheet;
 };
 
-export const cssFromString = function (value: string): CSSStyleSheet {
+export const cssFromString = function (value: string | CSSStyleSheet): CSSStyleSheet {
+    if (value instanceof CSSStyleSheet)
+        return value;
     const cssStyleSheet = new CSSStyleSheet();
     //@ts-ignore
     cssStyleSheet.replaceSync(value);
