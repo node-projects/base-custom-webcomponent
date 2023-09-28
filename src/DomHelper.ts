@@ -12,7 +12,7 @@ export class DomHelper {
             }
             if (includeShadowDom && (<any>element).shadowRoot != null) {
                 yield (<any>element).shadowRoot;
-                const childs = DomHelper.getAllChildNodes((<any>element).shadowRoot, includeShadowDom);
+                const childs = DomHelper.getAllChildNodes((<any>element).shadowRoot, includeShadowDom, ignore);
                 for (const cnode of childs) {
                     yield cnode;
                 }
