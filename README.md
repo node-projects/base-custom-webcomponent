@@ -63,6 +63,8 @@ class:className="[[boolExpression]]" to set/remove a css class
 
 $attribute="[[expression]]" to bind to Attributes instead of properties.
 
+.property="[[expression]]" to bind to Proertys without using the attribute name (to disable side effects).
+
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
 use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable.

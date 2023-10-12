@@ -420,15 +420,17 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     }
                     (<Element>node).appendChild(value)
                 } else {
-                    if (property[0] == '$') {
+                    if (property[0] === '$') {
                         if (!value && noNull)
-                            (<Element>node).setAttribute(property.substring(1, property.length), '');
+                            (<Element>node).setAttribute(property.substring(1), '');
                         else
-                            (<Element>node).setAttribute(property.substring(1, property.length), value);
+                            (<Element>node).setAttribute(property.substring(1), value);
                     }
                     else if (property == 'class')
                         (<Element>node).setAttribute(property, value);
                     else {
+                        if (property[0] === '.')
+                            property = property.substring(1);
                         if (!value && noNull)
                             node[property] = '';
                         else
@@ -702,7 +704,7 @@ export class BaseCustomWebComponentConnectedReady extends BaseCustomWebComponent
     }
 
     protected _isReady: boolean;
-    
+
     connectedCallback() {
         //@ts-ignore
         if (this.ready && !this._isReady)
