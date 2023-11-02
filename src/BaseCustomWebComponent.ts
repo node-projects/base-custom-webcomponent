@@ -232,7 +232,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
                         const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                         let value = attributeValues[0];
-                        let event = node instanceof HTMLInputElement ? 'input' : (node instanceof HTMLSelectElement ? 'change' : a.name + '-changed');
+                        let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? 'input' : (node instanceof HTMLSelectElement ? 'change' : a.name + '-changed');
                         if (attributeValues.length > 1 && attributeValues[1])
                             event = attributeValues[1];
                         const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
