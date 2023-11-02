@@ -609,6 +609,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
         }
 
+        //@ts-ignore
+        if (this.templateCloned) {
+            //@ts-ignore
+            this.templateCloned();
+        }
+
         if (style) {
             //@ts-ignore
             if (style instanceof Promise)
@@ -685,19 +691,30 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
     }
 }
 
-export class BaseCustomWebComponentConnectedReady extends BaseCustomWebComponentNoAttachedTemplate {
+export class BaseCustomWebComponentLazyAppendConnectedReady extends BaseCustomWebComponentNoAttachedTemplate {
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
         super(template, style);
 
         queueMicrotask(() => {
-            //@ts-ignore
-            if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
-                //@ts-ignore
-                this.constructor._oneTimeSetup = true;
-                //@ts-ignore
-                this.oneTimeSetup();
-            }
+            if (this._rootDocumentFragment)
+                this.shadowRoot.appendChild(this._rootDocumentFragment);
         });
+    }
+
+    protected _isReady: boolean;
+
+    connectedCallback() {
+        //@ts-ignore
+        if (this.ready && !this._isReady)
+            //@ts-ignore
+            this.ready();
+        this._isReady = true;
+    }
+}
+
+export class BaseCustomWebComponentConnectedReady extends BaseCustomWebComponentNoAttachedTemplate {
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
+        super(template, style);
 
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
