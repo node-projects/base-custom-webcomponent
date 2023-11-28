@@ -512,7 +512,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     //@ts-ignore
     private static _propertiesDictionary: Map<string, string>;
-    protected _parseAttributesToProperties() {
+    protected _parseAttributesToProperties(noBindings: boolean = false) {
         //@ts-ignore
         if (!this.constructor._propertiesDictionary) {
             //@ts-ignore
@@ -530,7 +530,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 if (pair[1] === Boolean)
                     this[pair[0]] = true;
                 else if (pair[1] === Object) {
-                    if (!a.value.startsWith("{{") && !a.value.startsWith("[[")) //cause of this Array in Array Json Values are not possible atm.
+                    if (noBindings || !a.value.startsWith("{{") && !a.value.startsWith("[[")) //cause of this Array in Array Json Values are not possible atm.
                         this[pair[0]] = JSON.parse(a.value);
                 }
                 else if (pair[1] === Number)
