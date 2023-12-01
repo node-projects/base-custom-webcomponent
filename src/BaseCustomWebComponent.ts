@@ -85,7 +85,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     //todo: bindings map should contain the name of the bound property
     protected _bindings: [binding: ((firstRun?: boolean) => void), name: string][];
-    protected _repeatWeakMap: WeakMap<any, Element[]>;
+    protected _repeatBindings: WeakMap<Node, [binding: ((firstRun?: boolean) => void), name: string][]>;
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
     protected _noWarningOnBindingErrors;
@@ -361,18 +361,29 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 else
                     callback = "this." + callback;
             }
-            for (let c of elementsCache) { // todo bindings of childs need to be killed
+            for (let c of elementsCache) {
                 if (c.parentNode) {
                     let intRepeatBindingItems: repeatBindingItem[] = [];
                     intRepeatBindingItems.push({ name: 'nodes', item: [c] });
                     intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
                     this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                    const bnds = this._repeatBindings.get(c);
+                    if (bnds?.length) {
+                        for (const b of bnds) {
+                            const idx = this._bindings.indexOf(b);
+                            if (idx >= 0)
+                                this._bindings.splice(idx, 1);
+                        }
+                    }
                     c.parentNode.removeChild(c);
                 }
             }
             elementsCache.length = 0;
 
             if (values) {
+                if (!this._repeatBindings)
+                    this._repeatBindings = new WeakMap();
+
                 //todo -> copy values to compare and only generate new controls...
                 let i = 0;
                 for (let e of values) {
@@ -383,7 +394,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     intRepeatBindingItems.push({ name: bindingIndexName, item: i });
                     let nd = <DocumentFragment>node.content.cloneNode(true);
                     elementsCache.push(...nd.children);
+                    const bndCount = this._bindings.length;
                     this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
+                    this._repeatBindings.set(nd.children[0], this._bindings.toSpliced(0, bndCount));
 
                     if (callback) {
                         intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
