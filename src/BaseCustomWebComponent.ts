@@ -84,7 +84,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly template: HTMLTemplateElement;
 
     //todo: bindings map should contain the name of the bound property
-    protected _bindings: [binding: ((firstRun?: boolean) => void), name: string][];
+    protected _bindings: [binding: ((firstRun?: boolean, onlyWhenChanged?: boolean) => void), name: string][];
     protected _repeatBindings: WeakMap<Node, [binding: ((firstRun?: boolean) => void), name: string][]>;
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
@@ -225,9 +225,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 value = value.substring(1);
                                 noNull = true;
                             }
-                            const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull);
+                            const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
                             this._bindings.push([b, null]);
-                            b(true);
+                            b(true, false);
                         }
                     } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
                         const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
@@ -241,9 +241,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             value = value.substring(1);
                             noNull = true;
                         }
-                        const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull);
+                        const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
                         this._bindings.push([b, null]);
-                        b(true);
+                        b(true, false);
                         if (event) {
                             for (let x of event.split(';')) {
                                 if (node[x] instanceof TypedEvent)
@@ -298,9 +298,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             value = value.substring(1);
             noNull = true;
         }
-        const b = (firstRun?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull);
+        const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
         this._bindings.push([b, null]);
-        b(true);
+        b(true, false);
     }
 
     private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, host: any, context: any) {
@@ -421,7 +421,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, noNull: boolean) {
+    private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, noNull: boolean, onlyWhenChanged: boolean) {
         try {
             const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
             if (firstRun || node[property] !== value) {
@@ -444,10 +444,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     else {
                         if (property[0] === '.')
                             property = property.substring(1);
-                        if (!value && noNull)
-                            node[property] = '';
-                        else
-                            node[property] = value;
+                        if (!value && noNull) {
+                            if (!onlyWhenChanged || node[property] != value)
+                                node[property] = '';
+                        } else {
+                            if (!onlyWhenChanged || node[property] != value)
+                                node[property] = value;
+                        }
                     }
                 }
             }
@@ -485,9 +488,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    protected _bindingsRefresh(property?: string) {
+    protected _bindingsRefresh(property?: string, onlyWhenChanged?: boolean) {
         if (this._bindings)
-            this._bindings.forEach(x => x[0](false));
+            this._bindings.forEach(x => x[0](false, onlyWhenChanged));
     }
 
     protected _bindingsSetValue(obj, path: string, value: any, context: any, repeatBindingItems?: repeatBindingItem[]) {
