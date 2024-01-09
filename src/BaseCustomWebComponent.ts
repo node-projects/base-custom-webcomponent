@@ -233,6 +233,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                         let value = attributeValues[0];
                         let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? 'input' : (node instanceof HTMLSelectElement ? 'change' : a.name + '-changed');
+                        if (event[0] == '.')
+                            event = event.substring(1);
                         if (attributeValues.length > 1 && attributeValues[1])
                             event = attributeValues[1];
                         const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
