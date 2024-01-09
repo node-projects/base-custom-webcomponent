@@ -439,6 +439,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     if (property[0] === '$') {
                         if (!value && noNull)
                             (<Element>node).setAttribute(property.substring(1), '');
+                        else if (!value)
+                            (<Element>node).removeAttribute(property.substring(1));
                         else
                             (<Element>node).setAttribute(property.substring(1), value);
                     }
