@@ -151,7 +151,7 @@ export class TestElement extends BaseCustomWebComponentConstructorAppend {
 
 ## Online Sample
 
-https://codesandbox.io/s/base-custom-webcomponent-forked-pwurcr?file=/src/test-element.ts
+https://codesandbox.io/p/sandbox/wkopk
 
 or here a repo
 
