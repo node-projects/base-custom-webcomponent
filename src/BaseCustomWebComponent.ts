@@ -219,7 +219,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             }
                         } else {
                             let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                            const camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            let camelCased = a.name
+                            if (a.name[0] !== '$')
+                                camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             let noNull = false;
                             if (value[0] === '?') {
                                 value = value.substring(1);
