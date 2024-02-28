@@ -80,7 +80,7 @@ type repeatBindingItem = { name: string, item: any }
 let _bindingRegex = /\[\[.*?\]\]/g;
 
 export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
-    static readonly style: CSSStyleSheet | Promise<CSSStyleSheet>;
+    static readonly style: CSSStyleSheet | Promise<CSSStyleSheet> | CSSStyleSheet[];
     static readonly template: HTMLTemplateElement;
 
     //todo: bindings map should contain the name of the bound property
@@ -648,14 +648,18 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 this.shadowRoot.adoptedStyleSheets = [style];
             //@ts-ignore
         } else if (this.constructor.style) {
-
             //@ts-ignore
-            if (this.constructor.style instanceof Promise)
-                //@ts-ignore
-                this.constructor.style.then((style) => this.shadowRoot.adoptedStyleSheets = [style]);
-            else
+            if (this.constructor.style instanceof CSSStyleSheet) {
                 //@ts-ignore
                 this.shadowRoot.adoptedStyleSheets = [this.constructor.style];
+                //@ts-ignore
+            } else if (Array.isArray(this.constructor.style)) {
+                //@ts-ignore
+                this.shadowRoot.adoptedStyleSheets = this.constructor.style;
+                //@ts-ignore
+            } else if (this.constructor.style instanceof Promise)
+                //@ts-ignore
+                this.constructor.style.then((style) => this.shadowRoot.adoptedStyleSheets = [style]);
         }
 
         //@ts-ignore
