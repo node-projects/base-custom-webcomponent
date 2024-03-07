@@ -505,6 +505,15 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             return;
         }
 
+        if (path.includes("[")) {
+            //support binding like this: {{this.picks?.[this.currentPick]?.ConfirmQuantity::value-changed}}
+            let p = path.replaceAll(".[", "[");
+            p += "=" + value + ";";
+            p = "try { " + p + " } catch (err) { console.warn(err); }";
+            eval(p);
+            return;
+        }
+
         let target = obj;
         if (path.startsWith('this.')) {
             path = path.substr(5);
