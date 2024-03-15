@@ -49,18 +49,17 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             }
         }
         const name = this.name;
-        const definingElement = this;
-
         if (window[name]) {
             window[name].template = undefined;
             //window[name].style = style;
             window[name].properties = props;
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
+            window[name]._definingElement = this;
         } else {
             window[name] = function () {
                 if (window[name].template === undefined)
-                    window[name].template = definingElement.querySelector('template');
+                    window[name].template = window[name]._definingElement.querySelector('template');
                 const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
 
                 for (let p in props) {
@@ -91,6 +90,7 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             window[name].properties = props;
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
+            window[name]._definingElement = this;
             window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
             if (!customElements.get(name))
                 customElements.define(name, window[name]);
