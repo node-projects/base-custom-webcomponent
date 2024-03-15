@@ -50,42 +50,51 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
         }
         const name = this.name;
         const definingElement = this;
-        window[name] = function () {
-            if (window[name].template === undefined)
-                window[name].template = definingElement.querySelector('template');
-            const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
 
-            for (let p in props) {
-                Object.defineProperty(instance, p, {
-                    get() {
-                        return this['_' + p];
-                    },
-                    set(newValue) {
-                        if (this['_' + p] !== newValue) {
-                            this['_' + p] = newValue;
-                            //@ts-ignore
-                            if (this.constructor._enableBindings)
-                                this._bindingsRefresh(p);
-                            instance.dispatchEvent(new CustomEvent(camelToDashCase(p) + '-changed', { detail: { newValue } }));
-                        }
-                    },
-                    enumerable: true,
-                    configurable: true,
-                });
-                if (props[p].default) {
-                    instance['_' + p] = props[p].default;
+        if (window[name]) {
+            window[name].template = undefined;
+            //window[name].style = style;
+            window[name].properties = props;
+            window[name]._propertiesDictionary = null;
+            window[name]._enableBindings = this.enableBindings;
+        } else {
+            window[name] = function () {
+                if (window[name].template === undefined)
+                    window[name].template = definingElement.querySelector('template');
+                const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
+
+                for (let p in props) {
+                    Object.defineProperty(instance, p, {
+                        get() {
+                            return this['_' + p];
+                        },
+                        set(newValue) {
+                            if (this['_' + p] !== newValue) {
+                                this['_' + p] = newValue;
+                                //@ts-ignore
+                                if (this.constructor._enableBindings)
+                                    this._bindingsRefresh(p);
+                                instance.dispatchEvent(new CustomEvent(camelToDashCase(p) + '-changed', { detail: { newValue } }));
+                            }
+                        },
+                        enumerable: true,
+                        configurable: true,
+                    });
+                    if (props[p].default) {
+                        instance['_' + p] = props[p].default;
+                    }
                 }
+                return instance;
             }
-            return instance;
-        }
 
-        //window[name].style = style;
-        window[name].properties = props;
-        window[name]._propertiesDictionary = null;
-        window[name]._enableBindings = this.enableBindings;
-        window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
-        if (!customElements.get(name))
-            customElements.define(name, window[name]);
+            //window[name].style = style;
+            window[name].properties = props;
+            window[name]._propertiesDictionary = null;
+            window[name]._enableBindings = this.enableBindings;
+            window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
+            if (!customElements.get(name))
+                customElements.define(name, window[name]);
+        }
     }
 }
 
