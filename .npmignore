@@ -2,6 +2,7 @@
 /src
 /.vs
 /.github
+/sample
 tsconfig.json
 debug.log
 .editorconfig

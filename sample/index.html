@@ -1,0 +1,41 @@
+<html>
+
+<head>
+    <script type="module">
+        import { BaseCustomWebComponentConstructorAppend } from "../dist/BaseCustomWebComponent.js";
+        class MyElement extends BaseCustomWebComponentConstructorAppend {
+            static properties = {
+                list: Array
+            }
+
+            constructor() {
+                super();
+                this._restoreCachedInititalValues();
+            }
+
+            ready() {
+                this._parseAttributesToProperties();
+                this._assignEvents();
+                this._bindingsParse();
+            }
+        }
+
+        customElements.define("my-element", MyElement);
+    </script>
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <my-element list='["aa","bb"]' style="display: flex; flex-direction: column; gap: 5px;">
+        <template shadowrootmode="open">
+            <button id="test">Test</button>
+            <template repeat:myitem="[[this.list]]">
+                <button>[[myitem]] - [[index]]</button>
+            </template>
+        </template>
+    </my-element>
+</body>
+
+</html>

@@ -561,7 +561,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (pair) {
                 if (pair[1] === Boolean)
                     this[pair[0]] = true;
-                else if (pair[1] === Object) {
+                else if (pair[1] === Object || pair[1] === Array) {
                     if (noBindings || !a.value.startsWith("{{") && !a.value.startsWith("[[")) //cause of this Array in Array Json Values are not possible atm.
                         this[pair[0]] = JSON.parse(a.value);
                 }
@@ -629,7 +629,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback)
             BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback(this);
 
-        this.attachShadow({ mode: 'open' });
+        if (!this.shadowRoot)
+            this.attachShadow({ mode: 'open' });
 
         if (template) {
             //@ts-ignore
