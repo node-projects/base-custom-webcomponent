@@ -70,7 +70,7 @@ sub <template></template> elements are not bound, so elements like <iron-list> o
 use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable.
 You could also use 'index' variable in the repeat binding for the current number. The attribute "repeat-index" could be used to change the name of the index variable.
 on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(item, nodes)]]
-!!caution!! => the repeat binding is only a preview at the moment, it leaks memory and redraws all items on array change
+!!caution!! => the repeat binding is only a preview at the moment, it redraws all items on array change
     
 ### Binding extensions
 
