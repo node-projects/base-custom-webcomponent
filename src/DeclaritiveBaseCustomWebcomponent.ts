@@ -7,12 +7,16 @@ function camelToDashCase(text: string) {
 class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentConstructorAppend {
     constructor() {
         super();
-        this._bindingsParse(null, true);
+        //@ts-ignore
+        if (this.constructor._enableBindings)
+            this._bindingsParse(null, true);
     }
 
     async connectedCallback() {
         this._parseAttributesToProperties();
-        this._bindingsRefresh();
+        //@ts-ignore
+        if (this.constructor._enableBindings)
+            this._bindingsRefresh();
     }
 }
 
@@ -59,7 +63,9 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
                     set(newValue) {
                         if (this['_' + p] !== newValue) {
                             this['_' + p] = newValue;
-                            this._bindingsRefresh(p);
+                            //@ts-ignore
+                            if (this.constructor._enableBindings)
+                                this._bindingsRefresh(p);
                             instance.dispatchEvent(new CustomEvent(camelToDashCase(p) + '-changed', { detail: { newValue } }));
                         }
                     },
@@ -76,6 +82,7 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
         //window[name].style = style;
         window[name].properties = props;
         window[name]._propertiesDictionary = null;
+        window[name]._enableBindings = this.enableBindings;
         window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
         if (!customElements.get(name))
             customElements.define(name, window[name]);
