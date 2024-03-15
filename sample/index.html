@@ -22,12 +22,11 @@
 
         customElements.define("my-element", MyElement);
     </script>
-    <style>
-
-    </style>
+    <script type="module" src="../dist/DeclaritiveBaseCustomWebcomponent.js"></script>
 </head>
 
 <body>
+    <h1>DSD Demo</h1>
     <my-element list='["aa","bb"]' style="display: flex; flex-direction: column; gap: 5px;">
         <template shadowrootmode="open">
             <button id="test">Test</button>
@@ -36,6 +35,21 @@
             </template>
         </template>
     </my-element>
+    <br><br>
+    <h1>DCE Demo</h1>
+    <node-projects-dce name="simple-dce-demo" enable-bindings properties='{"list":"Array"}' >
+        <template>
+            <style>h1 {color: blue}</style>
+            <h1>Hello World</h1>
+            <template repeat:myitem="[[this.list]]">
+                <button>[[myitem]] - [[index]]</button>
+            </template>
+        </template>
+    </node-projects-dce>
+
+    <simple-dce-demo list='["aa","bb"]'>
+
+    </simple-dce-demo>
 </body>
 
 </html>
