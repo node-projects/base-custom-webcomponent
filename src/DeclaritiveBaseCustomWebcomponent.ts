@@ -33,7 +33,6 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
     constructor() {
         super();
         this._parseAttributesToProperties();
-        const template = this.querySelector('template');
         let props = {};
         if (this.properties) {
             if (this.properties[0] === '{') {
@@ -46,7 +45,10 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             }
         }
         const name = this.name;
+        const definingElement = this;
         window[name] = function () {
+            if (window[name].template === undefined)
+                window[name].template = definingElement.querySelector('template');
             const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
 
             for (let p in props) {
@@ -71,8 +73,6 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             return instance;
         }
 
-
-        window[name].template = template;
         //window[name].style = style;
         window[name].properties = props;
         window[name]._propertiesDictionary = null;
