@@ -42,7 +42,12 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             if (this.properties[0] === '{') {
                 const obj = JSON.parse(this.properties);
                 for (let i in obj) {
-                    props[i] = window[obj[i]];
+                    if (typeof obj[i] === 'string')
+                        props[i] = window[obj[i]];
+                    else {
+                        props[i] = obj[i];
+                        props[i].type = obj[i].type ? window[obj[i].type] : String;
+                    }
                 }
             } else {
                 props = this.properties.split(/[\s,;]+/).reduce((a, v) => ({ ...a, [v]: String }), {});
@@ -70,6 +75,20 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
                         set(newValue) {
                             if (this['_' + p] !== newValue) {
                                 this['_' + p] = newValue;
+
+                                if (props[p].reflect) {
+                                    if (props[p].type === Boolean) {
+                                        if (newValue === true)
+                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), '');
+                                        else
+                                            this.removeAttribute(props[p].attribute ?? camelToDashCase(p));
+                                    } else {
+                                        if (props[p].type === Object || props[p].type === Array)
+                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), JSON.stringify(newValue));
+                                        else
+                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), newValue);
+                                    }
+                                }
                                 //@ts-ignore
                                 if (this.constructor._enableBindings)
                                     this._bindingsRefresh(p);
@@ -99,3 +118,21 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
 }
 
 customElements.define("node-projects-dce", DeclaritiveBaseCustomWebcomponent);
+
+/*
+<node-projects-dce name="simple-dce-demo" properties='{"list":"Array", "list2":"Array"}' enable-bindings >
+    <template>
+        <style>h1 {color: red}</style>
+        <h1>Hello World</h1>
+        <template repeat:myitem="[[this.list]]">
+            <button>[[myitem.toUpperCase()]] - <b>[[myitem.toLowerCase()]]</b> - [[index]]</button>
+            <ul>
+            <template repeat:myitem2="[[this.list2]]" repeat-index="inneridx">
+                <button>[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
+            </template>
+            </ul>
+        </template>
+    </template>
+</node-projects-dce>
+<simple-dce-demo list='["aa","bb","cc"]' list2='["hello", "you"]' style="position:absolute;left:184px;top:-53px;"></simple-dce-demo>
+*/

@@ -44,7 +44,7 @@ export const cssFromString = function (value: string | CSSStyleSheet | any): CSS
 };
 
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition; };
+type propertyComplexDefinition = { type: propertySimpleDefinition; reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 // decorators
