@@ -1,7 +1,7 @@
 {
   "description": "Base Custom Webcomponent",
   "name": "@node-projects/base-custom-webcomponent",
-  "version": "0.25.5",
+  "version": "0.25.6",
   "type": "module",
   "main": "./dist/index.js",
   "author": "",
@@ -11,7 +11,7 @@
     "start": "web-dev-server --node-resolve --open sample/index.html"
   },
   "devDependencies": {
-    "typescript": "^5.4.2",
+    "typescript": "^5.4.3",
     "@web/dev-server": "^0.4.3"
   },
   "repository": {

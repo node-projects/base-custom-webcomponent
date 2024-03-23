@@ -5,4 +5,5 @@ export * from "./TypedEvent.js";
 export * from "./TouchContextMenu.js";
 export * from "./Debounce.js";
 export * from "./DeclaritiveBaseCustomWebcomponent.js";
+export * from "./WeakArray.js";
 //export * from "./HotModuleReplacement.js"

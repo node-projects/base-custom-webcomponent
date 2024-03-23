@@ -1,4 +1,5 @@
 import { BaseCustomWebComponentConstructorAppend, BaseCustomWebComponentNoAttachedTemplate, css } from "./BaseCustomWebComponent.js";
+import { WeakArray } from "./WeakArray.js";
 
 function camelToDashCase(text: string) {
     return text.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`);
@@ -18,7 +19,20 @@ class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentConstructorAppen
         if (this.constructor._enableBindings)
             this._bindingsRefresh();
     }
+
+    _reapplyTemplateAfterUpdate() {
+        this._bindings = null;
+        this.shadowRoot.innerHTML = '';
+        //@ts-ignore
+        this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
+        this.shadowRoot.appendChild(this._rootDocumentFragment);
+        //@ts-ignore
+        if (this.constructor._enableBindings)
+            this._bindingsParse(null, true);
+    }
 }
+
+const instanceMap = new Map<string, WeakArray<BaseDeclaritiveWebcomponent>>();
 
 class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttachedTemplate {
 
@@ -55,17 +69,23 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
         }
         const name = this.name;
         if (window[name]) {
-            window[name].template = undefined;
+            window[name].template = this.querySelector('template');
             //window[name].style = style;
             window[name].properties = props;
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
             window[name]._definingElement = this;
+            const instanceArray = instanceMap.get(name);
+            for (const i of instanceArray)
+                i._reapplyTemplateAfterUpdate();
         } else {
+            const instanceArray = new WeakArray<BaseDeclaritiveWebcomponent>();
+            instanceMap.set(name, instanceArray);
             window[name] = function () {
                 if (window[name].template === undefined)
                     window[name].template = window[name]._definingElement.querySelector('template');
                 const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
+                instanceArray.add(instance);
 
                 for (let p in props) {
                     Object.defineProperty(instance, p, {
