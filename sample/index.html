@@ -37,19 +37,51 @@
     </my-element>
     <br><br>
     <h1>DCE Demo</h1>
-    <node-projects-dce name="simple-dce-demo" enable-bindings properties='{"list":"Array","ctx":{"type":"String","reflect":true}}' >
+    <node-projects-dce name="simple-dce-demo" enable-bindings
+        properties='{"list":"Array","ctx":{"type":"String","reflect":true}}'>
         <template>
-            <style>h1 {color: blue}</style>
+            <style>
+                h1 {
+                    color: blue
+                }
+            </style>
             <h1>Hello World</h1>
             <div>[[this.ctx]]</div>
             <template repeat:myitem="[[this.list]]">
-                <button>[[myitem]] - [[index]]</button>
+                <button @click="{{this.ctx = myitem}}"
+                    $aaaonclick="[['this.getRootNode().host.ctx = \'' + myitem + '\'']]">[[myitem]] - [[index]]</button>
             </template>
         </template>
     </node-projects-dce>
 
     <simple-dce-demo list='["aa","bb"]' ctx="test">
     </simple-dce-demo>
+
+    <br><br>
+
+    <node-projects-dce id="a" name="simple-dce-demo" enable-bindings
+        properties='{"list":"Array","ctx":{"type":"String","reflect":true}}'>
+        <template>
+            <style>
+                h1 {
+                    color: red
+                }
+            </style>
+            <h1>Hello World</h1>
+            <div>[[this.ctx]]</div>
+            <template repeat:myitem="[[this.list]]">
+                <button @click="{{this.ctx = myitem}}"
+                    $aaaonclick="[['this.getRootNode().host.ctx = \'' + myitem + '\'']]">[[myitem]] - [[index]]</button>
+            </template>
+        </template>
+    </node-projects-dce>
+
+    <simple-dce-demo list='["aa","bb"]' ctx="test">
+    </simple-dce-demo>
+
+    <script>
+        setTimeout(() => a.upgradeAllInstances(), 2000);
+    </script>
 </body>
 
 </html>

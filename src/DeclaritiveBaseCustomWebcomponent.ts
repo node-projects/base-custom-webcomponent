@@ -1,19 +1,32 @@
-import { BaseCustomWebComponentConstructorAppend, BaseCustomWebComponentNoAttachedTemplate, css } from "./BaseCustomWebComponent.js";
+import { BaseCustomWebComponentNoAttachedTemplate, css } from "./BaseCustomWebComponent.js";
 import { WeakArray } from "./WeakArray.js";
 
 function camelToDashCase(text: string) {
     return text.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`);
 }
 
-class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentConstructorAppend {
+const instanceMap = new Map<string, WeakArray<BaseDeclaritiveWebcomponent>>();
+class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentNoAttachedTemplate {
+    #firstConnect = false;
+
     constructor() {
         super();
-        //@ts-ignore
-        if (this.constructor._enableBindings)
-            this._bindingsParse(null, true);
     }
 
     async connectedCallback() {
+        if (!this.#firstConnect) {
+            this.#firstConnect = true;
+            if (window[this.localName].template === undefined) {
+                window[this.localName].template = window[this.localName]._definingElement.querySelector('template');
+            }
+            //@ts-ignore
+            this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
+            //@ts-ignore
+            if (this.constructor._enableBindings)
+                this._bindingsParse(null, true);
+            this.shadowRoot.appendChild(this._rootDocumentFragment);
+        }
+
         this._parseAttributesToProperties();
         //@ts-ignore
         if (this.constructor._enableBindings)
@@ -31,8 +44,6 @@ class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentConstructorAppen
             this._bindingsParse(null, true);
     }
 }
-
-const instanceMap = new Map<string, WeakArray<BaseDeclaritiveWebcomponent>>();
 
 class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttachedTemplate {
 
@@ -69,21 +80,15 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
         }
         const name = this.name;
         if (window[name]) {
-            window[name].template = this.querySelector('template');
-            //window[name].style = style;
+            window[name].template = undefined;
             window[name].properties = props;
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
             window[name]._definingElement = this;
-            const instanceArray = instanceMap.get(name);
-            for (const i of instanceArray)
-                i._reapplyTemplateAfterUpdate();
         } else {
             const instanceArray = new WeakArray<BaseDeclaritiveWebcomponent>();
             instanceMap.set(name, instanceArray);
             window[name] = function () {
-                if (window[name].template === undefined)
-                    window[name].template = window[name]._definingElement.querySelector('template');
                 const instance = Reflect.construct(BaseDeclaritiveWebcomponent, [], window[name]);
                 instanceArray.add(instance);
 
@@ -134,6 +139,13 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             if (!customElements.get(name))
                 customElements.define(name, window[name]);
         }
+    }
+
+    upgradeAllInstances(template?: HTMLTemplateElement) {
+        window[this.name].template = template ?? this.querySelector('template');
+        const instanceArray = instanceMap.get(this.name);
+        for (const i of instanceArray)
+            i._reapplyTemplateAfterUpdate();
     }
 }
 
