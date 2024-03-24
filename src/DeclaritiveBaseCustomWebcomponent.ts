@@ -152,19 +152,20 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
 customElements.define("node-projects-dce", DeclaritiveBaseCustomWebcomponent);
 
 /*
-<node-projects-dce name="simple-dce-demo" properties='{"list":"Array", "list2":"Array"}' enable-bindings >
+<node-projects-dce name="simple-dce-demo" properties='{"list":"Array", "list2":"Array", "ctx":{"type":"String","reflect":true}}' enable-bindings >
     <template>
         <style>h1 {color: red}</style>
         <h1>Hello World</h1>
+        <div style="border: solid 3px black">Ctx: [[this.ctx]]</div>
         <template repeat:myitem="[[this.list]]">
             <button>[[myitem.toUpperCase()]] - <b>[[myitem.toLowerCase()]]</b> - [[index]]</button>
             <ul>
             <template repeat:myitem2="[[this.list2]]" repeat-index="inneridx">
-                <button>[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
+                <button @click="{{this.ctx = myItem2}}" >[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
             </template>
             </ul>
         </template>
     </template>
 </node-projects-dce>
-<simple-dce-demo list='["aa","bb","cc"]' list2='["hello", "you"]' style="position:absolute;left:184px;top:-53px;"></simple-dce-demo>
+<simple-dce-demo list='["aa","bb","cc"]' list2='["hello", "you"]' ctx="TestCtx" style="position:absolute;left:184px;top:-53px;"></simple-dce-demo>
 */

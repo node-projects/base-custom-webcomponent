@@ -70,8 +70,7 @@
             <h1>Hello World</h1>
             <div>[[this.ctx]]</div>
             <template repeat:myitem="[[this.list]]">
-                <button @click="{{this.ctx = myitem}}"
-                    $aaaonclick="[['this.getRootNode().host.ctx = \'' + myitem + '\'']]">[[myitem]] - [[index]]</button>
+                <button @click="{{this.ctx = myitem}}">[[myitem]] - [[index]]</button>
             </template>
         </template>
     </node-projects-dce>
