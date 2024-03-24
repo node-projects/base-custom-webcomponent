@@ -232,37 +232,29 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             b(true, false);
                         }
                     } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
-                        if (a.name[0] === '@') {
-                            const event = a.name.substring(1);
-                            if (node[event] instanceof TypedEvent)
-                                (<TypedEvent<void>>node[event]).on((e) => this._bindingRunEvalInt(a.value.substring(2, a.value.length - 2), repeatBindingItems, <any>e, context));
-                            else
-                                node.addEventListener(event, (e) => this._bindingRunEvalInt(a.value.substring(2, a.value.length - 2), repeatBindingItems, e, context));
-                        } else {
-                            const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
-                            let nm = a.name;
-                            if (nm[0] == '.')
-                                nm = nm.substring(1);
-                            let value = attributeValues[0];
-                            let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? 'input' : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
-                            if (attributeValues.length > 1 && attributeValues[1])
-                                event = attributeValues[1];
-                            const camelCased = nm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                            let noNull = false;
-                            if (value[0] === '?') {
-                                value = value.substring(1);
-                                noNull = true;
-                            }
-                            const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
-                            this._bindings.push([b, null]);
-                            b(true, false);
-                            if (event) {
-                                for (let x of event.split(';')) {
-                                    if (node[x] instanceof TypedEvent)
-                                        (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
-                                    else
-                                        node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
-                                }
+                        const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
+                        let nm = a.name;
+                        if (nm[0] == '.')
+                            nm = nm.substring(1);
+                        let value = attributeValues[0];
+                        let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? 'input' : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
+                        if (attributeValues.length > 1 && attributeValues[1])
+                            event = attributeValues[1];
+                        const camelCased = nm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        let noNull = false;
+                        if (value[0] === '?') {
+                            value = value.substring(1);
+                            noNull = true;
+                        }
+                        const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
+                        this._bindings.push([b, null]);
+                        b(true, false);
+                        if (event) {
+                            for (let x of event.split(';')) {
+                                if (node[x] instanceof TypedEvent)
+                                    (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
+                                else
+                                    node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
                             }
                         }
                     }

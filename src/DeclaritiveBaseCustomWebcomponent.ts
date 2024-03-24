@@ -161,7 +161,7 @@ customElements.define("node-projects-dce", DeclaritiveBaseCustomWebcomponent);
             <button>[[myitem.toUpperCase()]] - <b>[[myitem.toLowerCase()]]</b> - [[index]]</button>
             <ul>
             <template repeat:myitem2="[[this.list2]]" repeat-index="inneridx">
-                <button @click="{{this.ctx = myItem2}}" >[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
+                <button @click="[[this.ctx = myitem2]]" >[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
             </template>
             </ul>
         </template>

@@ -71,11 +71,39 @@ use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat i
 You could also use 'index' variable in the repeat binding for the current number. The attribute "repeat-index" could be used to change the name of the index variable.
 on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(item, nodes)]]
 !!caution!! => the repeat binding is only a preview at the moment, it redraws all items on array change
-    
+
+## Event Code Bindings
+
+with for example @click="[[this.aa(event)]]" you could create a event binding wich could run any javascript code inside of the brackets.
+
+
 ### Binding extensions
 
  - Null/Undefined Extension {{? }} - If you start a binding with a questionmark (like this: {{?), the value of the binding is assigned as an empty string when null or undefined.
  - Invert extension {{! }} - If you use "!" on the start of a Binding, the bool value is inverted, and also asigned inverted (not yet developed, will do if needed)   
+
+## Declaritive Custom Element
+
+With the node-projects-dce element you could create a custom elment declaritively, see:
+
+Sample:
+
+    <node-projects-dce name="simple-dce-demo" properties='{"list":"Array", "list2":"Array", "ctx":{"type":"String","reflect":true}}' enable-bindings >
+        <template>
+            <style>h1 {color: red}</style>
+            <h1>Hello World</h1>
+            <div style="border: solid 3px black">Ctx: [[this.ctx]]</div>
+            <template repeat:myitem="[[this.list]]">
+                <button>[[myitem.toUpperCase()]] - <b>[[myitem.toLowerCase()]]</b> - [[index]]</button>
+                <ul>
+                <template repeat:myitem2="[[this.list2]]" repeat-index="inneridx">
+                    <button @click="[[this.ctx = myitem2]]" >[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
+                </template>
+                </ul>
+            </template>
+        </template>
+    </node-projects-dce>
+    <simple-dce-demo list='["aa","bb","cc"]' list2='["hello", "you"]' ctx="TestCtx" style="position:absolute;left:184px;top:-53px;"></simple-dce-demo>
 
 ## Developing
 
