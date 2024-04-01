@@ -52,6 +52,11 @@
                     $aaaonclick="[['this.getRootNode().host.ctx = \'' + myitem + '\'']]">[[myitem]] - [[index]]</button>
             </template>
         </template>
+        <style type="adopted-css">
+            button {
+                color: green;
+            }
+        </style>
     </node-projects-dce>
 
     <simple-dce-demo list='["aa","bb"]' ctx="test">
@@ -72,7 +77,18 @@
             <template repeat:myitem="[[this.list]]">
                 <button @click="[[this.ctx = myitem]]">[[myitem]] - [[index]]</button>
             </template>
+            <template if="[[this.list == null]]">
+                <button>111</button>
+            </template>
+            <template if="[[this.list != null]]">
+                <button @click="[[this.list = null]]">222</button>
+            </template>
         </template>
+        <style type="adopted-css">
+            button {
+                color: blue;
+            }
+        </style>
     </node-projects-dce>
 
     <simple-dce-demo list='["aa","bb"]' ctx="test">

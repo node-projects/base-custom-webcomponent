@@ -63,14 +63,20 @@ class:className="[[boolExpression]]" to set/remove a css class
 
 $attribute="[[expression]]" to bind to Attributes instead of properties.
 
+?booleanAttribute="[[expression]]" to bind to a boolean Attribute.
+
 .property="[[expression]]" to bind to Proertys without using the attribute name (to disable side effects).
 
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
-use repeat:nameOfItem=[[enumerableExpression]] on a Template Element to repeat it for every instance of the enumerable.
+css type adopted-css
+
+use repeat:nameOfItem="[[enumerableExpression]]" on a template element to repeat it for every instance of the enumerable.
 You could also use 'index' variable in the repeat binding for the current number. The attribute "repeat-index" could be used to change the name of the index variable.
 on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(item, nodes)]]
 !!caution!! => the repeat binding is only a preview at the moment, it redraws all items on array change
+
+use if="[[expression]]" an a template element to show it conditionally
 
 ## Event Code Bindings
 

@@ -188,8 +188,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const b = () => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
                             this._bindings.push([b, null]);
                             b();
-                        } else if (a.name == 'repeat-changed-item-callback') {
+                        } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
                             //do nothing
+                        } else if (a.name === 'if' && node instanceof HTMLTemplateElement) {
+                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const elementsCache: Node[] = [];
+                            const b = () => this._bindingConditional(<HTMLTemplateElement>node, value, repeatBindingItems, elementsCache, host, context);
+                            this._bindings.push([b, null]);
+                            b();
                         } else if (a.name.startsWith('repeat:')) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -220,7 +226,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         } else {
                             let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             let camelCased = a.name
-                            if (a.name[0] !== '$')
+                            if (a.name[0] !== '$' && a.name[0] !== '?')
                                 camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             let noNull = false;
                             if (value[0] === '?') {
@@ -357,6 +363,30 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         return value;
     }
 
+    private _bindingConditional(node: HTMLTemplateElement, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
+        try {
+            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+
+            if (!value && elementsCache.length > 0) {
+                for (let c of elementsCache) {
+                    c.parentNode.removeChild(c);
+                }
+                elementsCache.length = 0;
+            }
+
+            if (value && elementsCache.length === 0) {
+                let nd = <DocumentFragment>node.content.cloneNode(true);
+                elementsCache.push(...nd.children);
+                this._bindingsInternalParse(nd, repeatBindingItems, true, host, context);
+
+                node.parentNode.insertBefore(nd, node);
+            }
+        } catch (error) {
+            if (!this._noWarningOnBindingErrors)
+                console.warn((<Error>error).message, 'Failed to bind Conditional to expression "' + expression + '"', node);
+        }
+    }
+
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
             const values = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
@@ -445,6 +475,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             (<Element>node).removeAttribute(property.substring(1));
                         else
                             (<Element>node).setAttribute(property.substring(1), value);
+                    } else if (property[0] === '?') {
+                        if (!value == true)
+                            (<Element>node).setAttribute(property.substring(1), '');
+                        else
+                            (<Element>node).removeAttribute(property.substring(1));
                     }
                     else if (property == 'class')
                         (<Element>node).setAttribute(property, value);

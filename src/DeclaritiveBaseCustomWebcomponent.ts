@@ -1,4 +1,4 @@
-import { BaseCustomWebComponentNoAttachedTemplate, css } from "./BaseCustomWebComponent.js";
+import { BaseCustomWebComponentNoAttachedTemplate, css, cssFromString } from "./BaseCustomWebComponent.js";
 import { WeakArray } from "./WeakArray.js";
 
 function camelToDashCase(text: string) {
@@ -18,9 +18,17 @@ class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentNoAttachedTempla
             this.#firstConnect = true;
             if (window[this.localName].template === undefined) {
                 window[this.localName].template = window[this.localName]._definingElement.querySelector('template');
+                const styles: HTMLStyleElement[] = window[this.localName]._definingElement.querySelectorAll('style[type=adopted-css]');
+                if (styles?.length)
+                    window[this.localName]._styles = Array.from(styles).map(x => cssFromString(x.textContent));
             }
             //@ts-ignore
             this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
+            //@ts-ignore
+            if (this.constructor._styles) {
+                //@ts-ignore
+                this.shadowRoot.adoptedStyleSheets = this.constructor._styles;
+            }
             //@ts-ignore
             if (this.constructor._enableBindings)
                 this._bindingsParse(null, true);
@@ -36,6 +44,12 @@ class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentNoAttachedTempla
     _reapplyTemplateAfterUpdate() {
         this._bindings = null;
         this.shadowRoot.innerHTML = '';
+        this.shadowRoot.adoptedStyleSheets = [];
+        //@ts-ignore
+        if (this.constructor._styles) {
+            //@ts-ignore
+            this.shadowRoot.adoptedStyleSheets = this.constructor._styles;
+        }
         //@ts-ignore
         this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
         this.shadowRoot.appendChild(this._rootDocumentFragment);
@@ -85,6 +99,7 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
             window[name]._definingElement = this;
+            window[name]._styles = null;
         } else {
             const instanceArray = new WeakArray<BaseDeclaritiveWebcomponent>();
             instanceMap.set(name, instanceArray);
@@ -135,6 +150,7 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
             window[name]._propertiesDictionary = null;
             window[name]._enableBindings = this.enableBindings;
             window[name]._definingElement = this;
+            window[name]._styles = null;
             window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
             if (!customElements.get(name))
                 customElements.define(name, window[name]);
@@ -143,6 +159,9 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
 
     upgradeAllInstances(template?: HTMLTemplateElement) {
         window[this.name].template = template ?? this.querySelector('template');
+        const styles = this.querySelectorAll('style[type=adopted-css]');
+        if (styles?.length)
+            window[this.name]._styles = Array.from(styles).map(x => cssFromString(x.textContent));
         const instanceArray = instanceMap.get(this.name);
         for (const i of instanceArray)
             i._reapplyTemplateAfterUpdate();
