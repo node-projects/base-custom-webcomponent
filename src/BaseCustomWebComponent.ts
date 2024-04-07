@@ -466,7 +466,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     for (let c = node.firstChild; c !== null; c = node.firstChild) {
                         node.removeChild(c);
                     }
-                    (<Element>node).appendChild(value)
+                    this._bindingsInternalParse(value, repeatBindingItems, true, host, context);
+                    (<Element>node).appendChild(value);
                 } else {
                     if (property[0] === '$') {
                         if (!value && noNull)
