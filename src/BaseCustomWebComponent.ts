@@ -462,7 +462,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (firstRun || node[property] !== value) {
                 if (removeAttributes && attribute)
                     (<Element>node).removeAttribute(attribute.name);
-                if (property === 'innerHTML' && value instanceof Element) {
+                if (property === 'innerHTML' && (value instanceof Element || value instanceof DocumentFragment)) {
                     for (let c = node.firstChild; c !== null; c = node.firstChild) {
                         node.removeChild(c);
                     }
