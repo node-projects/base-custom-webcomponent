@@ -190,12 +190,15 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             b();
                         } else if (a.name.startsWith('bcw:')) {
                             if (a.name === 'bcw:visible') {
-                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&') + "?'visible':'collapse'";
-                                const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'visibility', value, repeatBindingItems, host, context);
-                                this._bindings.push([b, null]);
-                                b();
+                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                                const b1 = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'visibility', value + "?'':'collapse'", repeatBindingItems, host, context);
+                                const b2 = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'content-visibility' + "?'':'hidden'", value, repeatBindingItems, host, context);
+                                this._bindings.push([b1, null]);
+                                this._bindings.push([b2, null]);
+                                b1();
+                                b2();
                             }
-                        }else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
+                        } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
                             //do nothing
                         } else if (a.name === 'if' && node instanceof HTMLTemplateElement) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
