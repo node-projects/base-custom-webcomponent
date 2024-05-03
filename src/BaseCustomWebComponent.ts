@@ -191,7 +191,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         } else if (a.name.startsWith('bcw:')) {
                             if (a.name === 'bcw:visible') {
                                 const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                                const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'display', value + "?'" + node.style.display + "':'none'", repeatBindingItems, host, context);
+                                const display = node.style.display;
+                                const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'display', value + "?'" + display + "':'none'", repeatBindingItems, host, context);
                                 this._bindings.push([b, null]);
                                 b();
                             }
