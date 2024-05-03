@@ -57,6 +57,8 @@ use [[expression]] for one way bindings
 
 use {{this.property::change;paste}} for two way bindings which listens to events 'change 'and 'paste'
 
+bcw:visible="[[bool-expression]]" to bind set css visiblity to visible when expression is true
+
 css:cssPropertyName="[[expression]]" to bind to a css property
 
 class:className="[[boolExpression]]" to set/remove a css class

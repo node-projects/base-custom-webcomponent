@@ -188,7 +188,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const b = () => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
                             this._bindings.push([b, null]);
                             b();
-                        } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
+                        } else if (a.name.startsWith('bcw:')) {
+                            if (a.name === 'bcw:visible') {
+                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&') + "?'visible':'collapse'";
+                                const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'visibility', value, repeatBindingItems, host, context);
+                                this._bindings.push([b, null]);
+                                b();
+                            }
+                        }else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
                             //do nothing
                         } else if (a.name === 'if' && node instanceof HTMLTemplateElement) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
