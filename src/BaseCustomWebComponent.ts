@@ -192,7 +192,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             if (a.name === 'bcw:visible') {
                                 const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                                 const b1 = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'visibility', value + "?'':'collapse'", repeatBindingItems, host, context);
-                                const b2 = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'content-visibility' + "?'':'hidden'", value, repeatBindingItems, host, context);
+                                const b2 = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'contentVisibility' + "?'':'hidden'", value, repeatBindingItems, host, context);
                                 this._bindings.push([b1, null]);
                                 this._bindings.push([b2, null]);
                                 b1();
