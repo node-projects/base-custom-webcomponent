@@ -391,7 +391,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
-                console.warn((<Error>error).message, 'Failed to bind Conditional to expression "' + expression + '"', node);
+                console.warn((<Error>error).message, 'Failed to bind Conditional to expression "' + expression + '"', this, node);
         }
     }
 
@@ -460,7 +460,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
-                console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', node);
+                console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', this, node);
         }
     }
 
@@ -507,7 +507,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
-                console.warn((<Error>error).message, ' - Failed to bind Property "' + property + '" to expression "' + expression + '"', node);
+                console.warn((<Error>error).message, ' - Failed to bind Property "' + property + '" to expression "' + expression + '"', this, node);
         }
     }
 
@@ -518,7 +518,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 node.style[property] = value;
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
-                console.warn((<Error>error).message, ' - Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', node);
+                console.warn((<Error>error).message, ' - Failed to bind CSS Property "' + property + '" to expression "' + expression + '"', this, node);
         }
     }
 
@@ -535,7 +535,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
-                console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', node);
+                console.warn((<Error>error).message, 'Failed to bind CSS Class "' + classname + '" to expression "' + expression + '"', this, node);
         }
     }
 
