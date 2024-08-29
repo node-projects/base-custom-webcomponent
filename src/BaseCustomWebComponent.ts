@@ -113,7 +113,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (a.name == "@touch:contextmenu")
                             addTouchFriendlyContextMenu(node, this[a.value].bind(this));
                         else {
-                            const sNm = a.name.substr(1);
+                            let sNm = a.name.substr(1);
+                            if (sNm[0] === '@') {
+                                sNm = sNm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            }
                             let nm = sNm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             if (node[nm] instanceof TypedEvent) {
                                 (<TypedEvent<any>>node[nm]).on(this[a.value].bind(this));
@@ -222,9 +225,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         } else if (a.name[0] === '@') { //todo remove events on repeat refresh
                             let nm;
                             if (a.name[1] === '@')
-                                nm = a.name.substring(2, a.name.length);
+                                nm = a.name.substring(2, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             else
-                                nm = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                                nm = a.name.substring(1, a.name.length);                                
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             if (a.name == "@touch:contextmenu")
                                 addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));

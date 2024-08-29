@@ -83,7 +83,7 @@ use if="[[expression]]" an a template element to show it conditionally
 ## Event Code Bindings
 
 with for example @click="[[this.aa(event)]]" you could create a event binding wich could run any javascript code inside of the brackets.
-use @@ if you do not want to replace - with uppercase
+use @@ if you want to replace - with uppercase in events
 
 
 ### Binding extensions
