@@ -220,15 +220,19 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             this._bindings.push([b, null]);
                             b();
                         } else if (a.name[0] === '@') { //todo remove events on repeat refresh
+                            let nm;
+                            if (a.name[1] === '@')
+                                nm = a.name.substring(2, a.name.length);
+                            else
+                                nm = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                            const camelCased = a.name.substring(1, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             if (a.name == "@touch:contextmenu")
                                 addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
                             else {
-                                if (node[camelCased] instanceof TypedEvent) {
-                                    (<TypedEvent<any>>node[camelCased]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                if (node[nm] instanceof TypedEvent) {
+                                    (<TypedEvent<any>>node[nm]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
                                 } else {
-                                    node.addEventListener(camelCased, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                    node.addEventListener(nm, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
                                 }
                             }
                         } else {
