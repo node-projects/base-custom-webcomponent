@@ -410,7 +410,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             const oldValue = node[this.oldValuesSymbol];
             if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i]))))
             {
-                node[this.oldValuesSymbol] = values;
+                if (values?.length)
+                    node[this.oldValuesSymbol] = [...values];
+                else
+                    node[this.oldValuesSymbol] = values;
 
                 if (callback) {
                     if (callback.startsWith('[[') && callback.endsWith(']]'))
