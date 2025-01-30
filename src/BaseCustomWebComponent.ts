@@ -156,11 +156,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
      * ==> this could also be nested
      * 
      */
-    protected _bindingsParse(node?: Node, removeAttributes = false, host: any = null, context: any = null) {
-        this._bindingsInternalParse(node, null, removeAttributes, host, context);
+    protected _bindingsParse(node?: Node, removeAttributes = false, host: any = null, context: any = null, useSignals = false) {
+        this._bindingsInternalParse(node, null, removeAttributes, host, context, useSignals);
     }
 
-    private _bindingsInternalParse(startNode: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
+    private _bindingsInternalParse(startNode: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, useSignals = false) {
         if (!this._bindings)
             this._bindings = [];
         if (!startNode)
@@ -227,7 +227,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             if (a.name[1] === '@')
                                 nm = a.name.substring(2, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             else
-                                nm = a.name.substring(1, a.name.length);                                
+                                nm = a.name.substring(1, a.name.length);
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             if (a.name == "@touch:contextmenu")
                                 addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
@@ -402,67 +402,76 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
+    oldValuesSymbol = Symbol('oldValuesSymbol');
+
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
-            const values = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
-            if (callback) {
-                if (callback.startsWith('[[') && callback.endsWith(']]'))
-                    callback = callback.substring(2, callback.length - 2);
-                else
-                    callback = "this." + callback;
-            }
-            for (let c of elementsCache) {
-                if (c.parentNode) {
-                    let intRepeatBindingItems: repeatBindingItem[] = [];
-                    intRepeatBindingItems.push({ name: 'nodes', item: [c] });
-                    intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
-                    this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
-                    const bnds = this._repeatBindings.get(c);
-                    if (bnds?.length) {
-                        for (const b of bnds) {
-                            const idx = this._bindings.indexOf(b);
-                            if (idx >= 0)
-                                this._bindings.splice(idx, 1);
-                        }
-                    }
-                    c.parentNode.removeChild(c);
+            const values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            const oldValue = node[this.oldValuesSymbol];
+            if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i]))))
+            {
+                node[this.oldValuesSymbol] = values;
+
+                if (callback) {
+                    if (callback.startsWith('[[') && callback.endsWith(']]'))
+                        callback = callback.substring(2, callback.length - 2);
+                    else
+                        callback = "this." + callback;
                 }
-            }
-            elementsCache.length = 0;
-
-            if (values) {
-                if (!this._repeatBindings)
-                    this._repeatBindings = new WeakMap();
-
-                //todo -> copy values to compare and only generate new controls...
-                let i = 0;
-                for (let e of values) {
-                    let intRepeatBindingItems: repeatBindingItem[] = [];
-                    if (repeatBindingItems)
-                        intRepeatBindingItems = repeatBindingItems.slice();
-                    intRepeatBindingItems.push({ name: bindingProperty, item: e });
-                    intRepeatBindingItems.push({ name: bindingIndexName, item: i });
-                    let nd = <DocumentFragment>node.content.cloneNode(true);
-                    elementsCache.push(...nd.children);
-                    const bndCount = this._bindings.length;
-                    this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
-                    this._repeatBindings.set(nd.children[0], this._bindings.toSpliced(0, bndCount));
-
-                    if (callback) {
-                        intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
-                        intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
-                        let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
-                        if (nds === undefined)
-                            nds = nd.children;
-                        if (nds) {
-                            for (let n of Array.from(nds))
-                                node.parentNode.insertBefore(<Node>n, node);
+                for (let c of elementsCache) {
+                    if (c.parentNode) {
+                        let intRepeatBindingItems: repeatBindingItem[] = [];
+                        intRepeatBindingItems.push({ name: 'nodes', item: [c] });
+                        intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
+                        this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                        const bnds = this._repeatBindings.get(c);
+                        if (bnds?.length) {
+                            for (const b of bnds) {
+                                const idx = this._bindings.indexOf(b);
+                                if (idx >= 0)
+                                    this._bindings.splice(idx, 1);
+                            }
                         }
+                        c.parentNode.removeChild(c);
                     }
-                    else {
-                        node.parentNode.insertBefore(nd, node);
+                }
+                elementsCache.length = 0;
+
+
+                if (values) {                    
+                    if (!this._repeatBindings)
+                        this._repeatBindings = new WeakMap();
+
+                    //todo -> copy values to compare and only generate new controls...
+                    let i = 0;
+                    for (let e of values) {
+                        let intRepeatBindingItems: repeatBindingItem[] = [];
+                        if (repeatBindingItems)
+                            intRepeatBindingItems = repeatBindingItems.slice();
+                        intRepeatBindingItems.push({ name: bindingProperty, item: e });
+                        intRepeatBindingItems.push({ name: bindingIndexName, item: i });
+                        let nd = <DocumentFragment>node.content.cloneNode(true);
+                        elementsCache.push(...nd.children);
+                        const bndCount = this._bindings.length;
+                        this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
+                        this._repeatBindings.set(nd.children[0], this._bindings.toSpliced(0, bndCount));
+
+                        if (callback) {
+                            intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
+                            intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
+                            let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                            if (nds === undefined)
+                                nds = nd.children;
+                            if (nds) {
+                                for (let n of Array.from(nds))
+                                    node.parentNode.insertBefore(<Node>n, node);
+                            }
+                        }
+                        else {
+                            node.parentNode.insertBefore(nd, node);
+                        }
+                        i++;
                     }
-                    i++;
                 }
             }
         } catch (error) {
