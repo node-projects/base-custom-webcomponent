@@ -406,10 +406,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
-            const values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            let values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            if (!Array.isArray(values))
+                values = [...values];
             const oldValue = node[this.oldValuesSymbol];
-            if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i]))))
-            {
+            if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i])))) {
                 if (values?.length)
                     node[this.oldValuesSymbol] = [...values];
                 else
@@ -441,7 +442,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 elementsCache.length = 0;
 
 
-                if (values) {                    
+                if (values) {
                     if (!this._repeatBindings)
                         this._repeatBindings = new WeakMap();
 
