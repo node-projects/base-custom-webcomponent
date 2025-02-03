@@ -407,7 +407,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
             let values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
-            if (!Array.isArray(values))
+            if (values && !Array.isArray(values))
                 values = [...values];
             const oldValue = node[this.oldValuesSymbol];
             if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i])))) {
