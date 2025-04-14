@@ -616,7 +616,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             //@ts-ignore
             for (let i in this.constructor.properties) {
                 //@ts-ignore
-                this.constructor._propertiesDictionary.set(i.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`), [i, this.constructor.properties[i]]);
+                let type = this.constructor.properties[i];
+                if (type.type)
+                    type = type.type;
+                //@ts-ignore
+                this.constructor._propertiesDictionary.set(i.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`), [i, type]);
             }
         }
         for (const a of this.attributes) {
