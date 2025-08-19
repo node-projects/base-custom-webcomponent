@@ -31,6 +31,7 @@ All the features are not enabled by default for performance reasons but you can 
  - this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
  - this._assignEvents(); ==> parses @event bindings to callbacks in class
  - this._bindingsParse(); ==> parses and enables bindings
+ - this._bindingsrefresh(); ==> Updates Bindings after change of bound Values
 
 ## Hot Reload
 
@@ -271,3 +272,4 @@ https://medium.com/@jochenkhner/a-idea-for-a-base-class-for-web-components-in-20
 ## Size
 
 The Size of the Base Component is around 25k as ts/js code, 10k minimized and 2.2k brotly compressed.
+
