@@ -49,7 +49,7 @@ type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 // decorators
 export function property(par?: propertyDefinition) {
-    return function (target: Object, propertyKey: PropertyKey) {
+    return function (target: Object, context: ClassFieldDecoratorContext<any, any>) {
         //@ts-ignore
         if (!target.constructor.properties) {
             //@ts-ignore
@@ -57,11 +57,11 @@ export function property(par?: propertyDefinition) {
         }
         if (par && (<propertyComplexDefinition>par).type != null) {
             //@ts-ignore
-            target.constructor.properties[propertyKey] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
+            target.constructor.properties[context.name] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
         }
         else {
             //@ts-ignore
-            target.constructor.properties[propertyKey] = par ? par : String;
+            target.constructor.properties[context.name] = par ? par : String;
         }
     }
 }
