@@ -49,7 +49,7 @@ type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 // decorators
 export function property(par?: propertyDefinition) {
-    return function (target: Object, context: ClassFieldDecoratorContext<any, any>) {
+    return function (target: any, context: ClassFieldDecoratorContext<any, any>) {
         //@ts-ignore
         if (!target.constructor.properties) {
             //@ts-ignore
