@@ -46,10 +46,11 @@ export const cssFromString = function (value: string | CSSStyleSheet | any): CSS
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
 type propertyComplexDefinition = { type: propertySimpleDefinition; reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
+type propertyDecoratorContext = | ClassAccessorDecoratorContext<any, any> | ClassGetterDecoratorContext<any, any> | ClassFieldDecoratorContext<any, any>;
 
 // decorators
 export function property(par?: propertyDefinition) {
-    return function (target: any, context: ClassFieldDecoratorContext<any, any>) {
+    return function (target: any, context: propertyDecoratorContext) {
         //@ts-ignore
         if (!target.constructor.properties) {
             //@ts-ignore
