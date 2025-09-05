@@ -23,6 +23,8 @@
         customElements.define("my-element", MyElement);
     </script>
     <script type="module" src="../dist/DeclaritiveBaseCustomWebcomponent.js"></script>
+    <script type="module" src="../node_modules/polyfill-symbol-metadata/index.js"></script>
+    <script type="module" src="./dist/demo.js"></script>
 </head>
 
 <body>
@@ -93,6 +95,10 @@
 
     <simple-dce-demo list='["aa","bb"]' ctx="test">
     </simple-dce-demo>
+
+    <br><br><br>
+
+    <a-a bb="Hallo wie gehts" style="border: 1px solid black; width: 200px; height: 200px; display: block;"></a-a>
 
     <script>
         setTimeout(() => a.upgradeAllInstances(), 2000);

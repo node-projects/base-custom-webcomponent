@@ -1,7 +1,7 @@
 {
   "description": "Base Custom Webcomponent",
   "name": "@node-projects/base-custom-webcomponent",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "type": "module",
   "main": "./dist/index.js",
   "author": "",
@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@web/dev-server": "^0.4.6",
+    "polyfill-symbol-metadata": "^0.0.2",
     "typescript": "^5.9.2"
   },
   "repository": {

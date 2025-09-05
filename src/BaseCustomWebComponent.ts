@@ -1,5 +1,6 @@
 import { addTouchFriendlyContextMenu } from "./TouchContextMenu.js";
 import { TypedEvent } from './TypedEvent.js';
+export { customElement, property } from './Decorator.js'
 
 function toParString(strings: TemplateStringsArray, values: any[]) {
     if (strings.length === 1)
@@ -42,39 +43,6 @@ export const cssFromString = function (value: string | CSSStyleSheet | any): CSS
     cssStyleSheet.replaceSync(value);
     return cssStyleSheet;
 };
-
-type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition; reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
-type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
-type propertyDecoratorContext = | ClassAccessorDecoratorContext<any, any> | ClassGetterDecoratorContext<any, any> | ClassFieldDecoratorContext<any, any>;
-
-// decorators
-export function property(par?: propertyDefinition) {
-    return function (target: any, context: propertyDecoratorContext) {
-        //@ts-ignore
-        if (!target.constructor.properties) {
-            //@ts-ignore
-            target.constructor.properties = {};
-        }
-        if (par && (<propertyComplexDefinition>par).type != null) {
-            //@ts-ignore
-            target.constructor.properties[context.name] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
-        }
-        else {
-            //@ts-ignore
-            target.constructor.properties[context.name] = par ? par : String;
-        }
-    }
-}
-
-export function customElement(tagname: string) {
-    return function (class_: (new (...par) => BaseCustomWebComponentNoAttachedTemplate)) {
-        //@ts-ignore
-        class_.is = tagname;
-
-        customElements.define(tagname, class_);
-    }
-}
 
 type repeatBindingItem = { name: string, item: any }
 
