@@ -2,8 +2,9 @@ import { BaseCustomWebComponentConstructorAppend } from '../../dist/BaseCustomWe
 export declare class AA extends BaseCustomWebComponentConstructorAppend {
     static template: HTMLTemplateElement;
     static style: CSSStyleSheet;
-    accessor bb: any;
-    accessor cc: any;
+    bb: any;
+    cc: any;
+    dd: string;
     constructor();
     ready(): void;
 }

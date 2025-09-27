@@ -2,7 +2,7 @@ import { BaseCustomWebComponentConstructorAppend, property, customElement, html,
 
 @customElement('a-a')
 export class AA extends BaseCustomWebComponentConstructorAppend {
-    static template = html`<div>[[this.bb]]</div>`;
+    static template = html`<div>[[this.bb]]</div><div>[[this.dd]]</div>`;
 
     static style = css`
     :host {
@@ -14,6 +14,9 @@ export class AA extends BaseCustomWebComponentConstructorAppend {
 
     @property()
     cc;
+
+    @property()
+    dd = '<img src="aa.jpg">';
 
     constructor() {
         super();

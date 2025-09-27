@@ -70,6 +70,8 @@ $attribute="[[expression]]" to bind to Attributes instead of properties.
 
 .property="[[expression]]" to bind to Proertys without using the attribute name (to disable side effects).
 
+[[$this.aa]] insert a property as parsed node. (the $ at the start)
+
 sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
 
 css type adopted-css

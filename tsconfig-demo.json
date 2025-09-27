@@ -5,7 +5,7 @@
     "allowJs": true,                       /* Allow javascript files to be compiled. */
     "declaration": true,                   /* Generates corresponding '.d.ts' file. */
     "sourceMap": false,                     /* Generates corresponding '.map' file. */
-    "outDir": "./dist",                        /* Redirect output structure to the directory. */
+    "outDir": "./sample/dist",                        /* Redirect output structure to the directory. */
     "noImplicitThis": true,                /* Raise error on 'this' expressions with an implied 'any' type. */
     "alwaysStrict": true,                  /* Parse in strict mode and emit "use strict" for each source file. */
     "resolveJsonModule": true,
@@ -26,8 +26,7 @@
     ]
   },
   "include": [
-    "./src/**/*",
-    "./src/**/*.js"
+    "./sample/src/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -8,6 +8,7 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "tsc": "tsc",
+    "tsc-demo": "tsc -p ./tsconfig-demo.json",
     "start": "web-dev-server --node-resolve --open sample/index.html"
   },
   "devDependencies": {
