@@ -35,9 +35,14 @@ const legacyProperty = (
     name: PropertyKey
 ) => {
     //@ts-ignore
-    if (!proto.constructor.properties) {
+    if (!Object.hasOwn(proto.constructor, 'properties')) {
         //@ts-ignore
-        proto.constructor.properties = {};
+        if (proto.constructor.properties)
+            //@ts-ignore
+            Object.defineProperty(proto.constructor, 'properties', { value: { ...proto.constructor.properties }, writable: true, configurable: true });
+        else
+            //@ts-ignore
+            proto.constructor.properties = {};
     }
     if (par && (<propertyComplexDefinition>par).type != null) {
         //@ts-ignore
