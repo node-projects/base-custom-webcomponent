@@ -359,7 +359,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
 
             if (value && elementsCache.length === 0) {
-                let nd = <DocumentFragment>node.content.cloneNode(true);
+                let nd = document.importNode(node.content, true);
                 elementsCache.push(...nd.children);
                 this._bindingsInternalParse(nd, repeatBindingItems, true, host, context);
 
@@ -423,7 +423,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             intRepeatBindingItems = repeatBindingItems.slice();
                         intRepeatBindingItems.push({ name: bindingProperty, item: e });
                         intRepeatBindingItems.push({ name: bindingIndexName, item: i });
-                        let nd = <DocumentFragment>node.content.cloneNode(true);
+                        let nd = document.importNode(node.content, true);
                         elementsCache.push(...nd.children);
                         const bndCount = this._bindings.length;
                         this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
@@ -669,14 +669,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         if (!this.shadowRoot)
             this.attachShadow({ mode: 'open' });
 
+        if (!template) {
+            //@ts-ignore
+            template = this.constructor.template;
+        }
         if (template) {
             //@ts-ignore
-            this._rootDocumentFragment = template.content.cloneNode(true);
-        }
-        //@ts-ignore
-        else if (this.constructor.template) {
-            //@ts-ignore
-            this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
+            this._rootDocumentFragment = document.importNode(template.content, true);
         }
 
         //@ts-ignore
