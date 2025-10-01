@@ -86,7 +86,9 @@ use if="[[expression]]" an a template element to show it conditionally
 ## Event Code Bindings
 
 with for example @click="[[this.aa(event)]]" you could create a event binding wich could run any javascript code inside of the brackets.
-use @@ if you want to replace - with uppercase in events
+use @@ if you want to replace - with uppercase in event-names (example: @@my-click -> myClick is the event name)
+
+you can use the special props 'event' wich is the event, and 'sender' wich is the element sending the event.
 
 
 ### Binding extensions

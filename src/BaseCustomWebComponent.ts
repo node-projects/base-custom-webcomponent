@@ -199,12 +199,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 nm = a.name.substring(1, a.name.length);
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             if (a.name == "@touch:contextmenu")
-                                addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context, node));
                             else {
                                 if (node[nm] instanceof TypedEvent) {
-                                    (<TypedEvent<any>>node[nm]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                    (<TypedEvent<any>>node[nm]).on((e) => this._bindingRunEval(value, repeatBindingItems, e, host, context, node));
                                 } else {
-                                    node.addEventListener(nm, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context));
+                                    node.addEventListener(nm, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context, node));
                                 }
                             }
                         } else {
@@ -298,14 +298,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         b(true, false);
     }
 
-    private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, host: any, context: any) {
+    private _bindingRunEval(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, host: any, context: any, node) {
         if (host)
-            return this._bindingRunEvalInt.bind(host)(expression, repeatBindingItems, event, context)
-        return this._bindingRunEvalInt(expression, repeatBindingItems, event, context)
+            return this._bindingRunEvalInt.bind(host)(expression, repeatBindingItems, event, context, node)
+        return this._bindingRunEvalInt(expression, repeatBindingItems, event, context, node)
     }
 
     //This method can not use "this" anywhere, cause it's bound to different host via method above.
-    private _bindingRunEvalInt(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, context: any) {
+    private _bindingRunEvalInt(expression: string, repeatBindingItems: repeatBindingItem[], event: Event, context: any, sender: Node) {
         if (repeatBindingItems) {
             let n = 0;
             let set = new Set();
@@ -319,6 +319,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             if (event) {
                 expression = 'let event = ___event;' + expression;
             }
+            if (sender) {
+                expression = 'let sender = ___sender;' + expression;
+            }
             if (context) {
                 for (let i in context) {
                     expression = 'let ' + i + ' = ___context["' + i + '"];' + expression;
@@ -330,26 +333,48 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             //@ts-ignore
             var ___event = event;
             //@ts-ignore
-            var ___context = context;
-            let value = eval(expression);
-            return value;
-        }
-        if (context) {
-            for (let i in context) {
-                expression = 'let ' + i + ' = ___context["' + i + '"];' + expression;
-            }
+            var ___sender = sender;
             //@ts-ignore
             var ___context = context;
             let value = eval(expression);
             return value;
         }
+        if (context) {
+            if (event) {
+                expression = 'let event = ___event;' + expression;
+            }
+            if (sender) {
+                expression = 'let sender = ___sender;' + expression;
+            }
+            for (let i in context) {
+                expression = 'let ' + i + ' = ___context["' + i + '"];' + expression;
+            }
+            //@ts-ignore
+            var ___event = event;
+            //@ts-ignore
+            var ___sender = sender;
+            //@ts-ignore
+            var ___context = context;
+            let value = eval(expression);
+            return value;
+        }
+        if (event) {
+            expression = 'let event = ___event;' + expression;
+        }
+        if (sender) {
+            expression = 'let sender = ___sender;' + expression;
+        }
+        //@ts-ignore
+        var ___event = event;
+        //@ts-ignore
+        var ___sender = sender;
         let value = eval(expression);
         return value;
     }
 
     private _bindingConditional(node: HTMLTemplateElement, expression: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
-            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
 
             if (!value && elementsCache.length > 0) {
                 for (let c of elementsCache) {
@@ -375,7 +400,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
         try {
-            let values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            let values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
             if (values && !Array.isArray(values))
                 values = [...values];
             const oldValue = node[this.oldValuesSymbol];
@@ -396,7 +421,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         let intRepeatBindingItems: repeatBindingItem[] = [];
                         intRepeatBindingItems.push({ name: 'nodes', item: [c] });
                         intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
-                        this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                        this._bindingRunEval(callback, intRepeatBindingItems, null, host, context, node);
                         const bnds = this._repeatBindings.get(c);
                         if (bnds?.length) {
                             for (const b of bnds) {
@@ -432,7 +457,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (callback) {
                             intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
                             intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
-                            let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context);
+                            let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context, node);
                             if (nds === undefined)
                                 nds = nd.children;
                             if (nds) {
@@ -455,7 +480,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, noNull: boolean, onlyWhenChanged: boolean) {
         try {
-            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
             if (firstRun || node[property] !== value) {
                 if (removeAttributes && attribute)
                     (<Element>node).removeAttribute(attribute.name);
@@ -502,7 +527,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _bindingSetElementCssValue(node: HTMLElement | SVGElement, property: string, expression: string, repeatBindingItems: repeatBindingItem[], host: any, context: any) {
         try {
-            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
             if (node.style[property] !== value)
                 node.style[property] = value;
         } catch (error) {
@@ -513,7 +538,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _bindingSetElementClass(node: HTMLElement | SVGElement, classname: string, expression: string, repeatBindingItems: repeatBindingItem[], host: any, context: any) {
         try {
-            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context);
+            const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
             if (value) {
                 if (!node.classList.contains(classname))
                     node.classList.add(classname);
