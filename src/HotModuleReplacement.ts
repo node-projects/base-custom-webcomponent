@@ -72,7 +72,7 @@ export class HotModuleReplacement {
                 break;
         }
     }
-    
+
     static async reloadJs(file: string) {
         let oldModule = await import(file);
 
@@ -92,6 +92,32 @@ export class HotModuleReplacement {
                         if (classExport.name == instance.constructor.name) {
                             if (instance._hmrCallback)
                                 instance._hmrCallback(classExport);
+                            else {
+                                let oldIdx = -1;
+                                if (instance.constructor.style) {
+                                    oldIdx = instance.shadowRoot.adoptedStyleSheets.indexOf(instance.constructor.style);
+                                    if (oldIdx >= 0) {
+                                        let newArr = Array.from(instance.shadowRoot.adoptedStyleSheets);
+                                        newArr.splice(oldIdx, 1);
+                                        instance.shadowRoot.adoptedStyleSheets = newArr;
+                                    }
+                                }
+                                if (classExport.style) {
+                                    if (oldIdx >= 0) {
+                                        let newArr = Array.from(instance.shadowRoot.adoptedStyleSheets);
+                                        //@ts-ignore
+                                        newArr.splice(oldIdx, 0, classExport.style);
+                                        instance.shadowRoot.adoptedStyleSheets = newArr;
+                                    }
+                                }
+                                instance.constructor.style = classExport.style;
+                                if (instance._bindings) {
+                                    instance.constructor.template = classExport.template;
+                                    instance._rootDocumentFragment = document.importNode(instance.constructor.template.content, true);
+                                    instance.shadowRoot.innerHTML = '';
+                                    instance.shadowRoot.appendChild(instance._rootDocumentFragment);
+                                }
+                            }
                         }
                     } else {
                         HotModuleReplacement.instances.splice(i, 1);
