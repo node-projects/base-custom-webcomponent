@@ -84,6 +84,7 @@ export class HotModuleReplacement {
         for (let nameOfexport in newModule) {
             const classExport = newModule[nameOfexport];
             if (getFunctionType(classExport) == 'class') {
+                let oldConstructor = null;
                 let i = HotModuleReplacement.instances.length;
                 while (i--) {
                     let instanceRef = HotModuleReplacement.instances[i];
@@ -94,6 +95,7 @@ export class HotModuleReplacement {
                                 instance._hmrCallback(classExport);
                             else {
                                 let oldIdx = -1;
+                                oldConstructor = instance.constructor;
                                 if (instance.constructor.style) {
                                     oldIdx = instance.shadowRoot.adoptedStyleSheets.indexOf(instance.constructor.style);
                                     if (oldIdx >= 0) {
@@ -110,7 +112,6 @@ export class HotModuleReplacement {
                                         instance.shadowRoot.adoptedStyleSheets = newArr;
                                     }
                                 }
-                                instance.constructor.style = classExport.style;
                                 if (instance._bindings) {
                                     instance.constructor.template = classExport.template;
                                     instance._rootDocumentFragment = document.importNode(instance.constructor.template.content, true);
@@ -125,6 +126,9 @@ export class HotModuleReplacement {
                         HotModuleReplacement.instances.splice(i, 1);
                     }
                 }
+
+                if (oldConstructor)
+                    oldConstructor.constructor.style = classExport.style;
             }
         }
 
