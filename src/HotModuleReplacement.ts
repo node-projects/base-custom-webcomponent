@@ -18,6 +18,12 @@ export class HotModuleReplacement {
 
     private static instances: WeakRef<any>[] = [];
 
+    public static enableHMR() {
+        BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback = (i) => {
+            HotModuleReplacement.instances.push(new WeakRef(i));
+        }
+    }
+
     public static initHMR(fetchChangedFiles: () => Promise<string[]>) {
         HotModuleReplacement.changesFetcher = fetchChangedFiles;
         BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback = (i) => {
@@ -35,13 +41,19 @@ export class HotModuleReplacement {
     private static async pollForChanges(interval: number) {
         let changes = await HotModuleReplacement.changesFetcher()
         if (changes != null) {
-            for (let file of changes) {
-                HotModuleReplacement.assertFileType(file);
-            }
+            HotModuleReplacement.assertChangedFiles(changes);
         }
         setTimeout(() => {
             HotModuleReplacement.pollForChanges(interval);
         }, interval);
+    }
+
+    public static assertChangedFiles(changes: string[]) {
+        if (changes != null) {
+            for (let file of changes) {
+                HotModuleReplacement.assertFileType(file);
+            }
+        }
     }
 
     private static assertFileType(file: string) {
@@ -60,6 +72,7 @@ export class HotModuleReplacement {
                 break;
         }
     }
+    
     static async reloadJs(file: string) {
         let oldModule = await import(file);
 
