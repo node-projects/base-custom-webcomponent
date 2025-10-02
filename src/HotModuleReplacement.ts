@@ -116,6 +116,8 @@ export class HotModuleReplacement {
                                     instance._rootDocumentFragment = document.importNode(instance.constructor.template.content, true);
                                     instance.shadowRoot.innerHTML = '';
                                     instance.shadowRoot.appendChild(instance._rootDocumentFragment);
+                                    instance._bindings = null;
+                                    instance._bindingsParse();
                                 }
                             }
                         }
