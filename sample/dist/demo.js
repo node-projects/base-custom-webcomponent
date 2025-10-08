@@ -6,7 +6,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 import { BaseCustomWebComponentConstructorAppend, property, customElement, html, css } from '../../dist/BaseCustomWebComponent.js';
 let AA = class AA extends BaseCustomWebComponentConstructorAppend {
-    static { this.template = html `<div>[[this.bb]]</div><div>[[this.dd]]</div>`; }
+    static { this.template = html `
+        <div>[[this.bb]]</div>
+        <div>[[this.dd]]</div>
+        <input type="checkbox" .checked="{{this.ee}}">Value: [[this.ee]]
+        `; }
     static { this.style = css `
     :host {
         font-size: 20px;
@@ -14,6 +18,7 @@ let AA = class AA extends BaseCustomWebComponentConstructorAppend {
     constructor() {
         super();
         this.dd = '<img src="aa.jpg">';
+        this.ee = false;
         this._restoreCachedInititalValues();
         this._bindingsParse();
     }
@@ -31,6 +36,9 @@ __decorate([
 __decorate([
     property()
 ], AA.prototype, "dd", void 0);
+__decorate([
+    property(Boolean)
+], AA.prototype, "ee", void 0);
 AA = __decorate([
     customElement('a-a')
 ], AA);

@@ -224,7 +224,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
                         const attributeValues = a.value.substring(2, a.value.length - 2).split('::');
                         let nm = a.name;
-                        if (nm[0] == '.')
+                        if (nm[0] == '.' || nm[0] == '$' || nm[0] == '?')
                             nm = nm.substring(1);
                         let value = attributeValues[0];
                         let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? (nm === 'checked' ? 'change' : 'input') : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
@@ -242,9 +242,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (event) {
                             for (let x of event.split(';')) {
                                 if (node[x] instanceof TypedEvent)
-                                    (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
+                                    (<TypedEvent<void>>node[x]).on((e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), this._getNodeValue(a.name[0], node, camelCased, nm), context, repeatBindingItems));
                                 else
-                                    node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), (<HTMLInputElement>node)[camelCased], context, repeatBindingItems));
+                                    node.addEventListener(x, (e) => this._bindingsSetValue(host ?? this, value.replaceAll('?', ''), this._getNodeValue(a.name[0], node, camelCased, nm), context, repeatBindingItems));
                             }
                         }
                     }
@@ -284,6 +284,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 }
             }
         }
+    }
+
+    private _getNodeValue(valueType: string | '$' | '?', node: Node, propertyName: string, attributeName: string) {
+        if (valueType === '?')
+            return (<HTMLElement>node).hasAttribute(attributeName)
+        if (valueType === '$')
+            return (<HTMLElement>node).getAttribute(attributeName)
+        return (<HTMLInputElement>node)[propertyName]
     }
 
     private _textFragmentBinding(node: Node, m: RegExpMatchArray, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {

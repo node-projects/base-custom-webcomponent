@@ -2,7 +2,12 @@ import { BaseCustomWebComponentConstructorAppend, property, customElement, html,
 
 @customElement('a-a')
 export class AA extends BaseCustomWebComponentConstructorAppend {
-    static template = html`<div>[[this.bb]]</div><div>[[this.dd]]</div>`;
+    
+    static template = html`
+        <div>[[this.bb]]</div>
+        <div>[[this.dd]]</div>
+        <input type="checkbox" .checked="{{this.ee}}">Value: [[this.ee]]
+        `;
 
     static style = css`
     :host {
@@ -17,6 +22,9 @@ export class AA extends BaseCustomWebComponentConstructorAppend {
 
     @property()
     dd = '<img src="aa.jpg">';
+
+    @property(Boolean)
+    ee = false;
 
     constructor() {
         super();

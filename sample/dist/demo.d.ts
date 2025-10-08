@@ -5,6 +5,7 @@ export declare class AA extends BaseCustomWebComponentConstructorAppend {
     bb: any;
     cc: any;
     dd: string;
+    ee: boolean;
     constructor();
     ready(): void;
 }
