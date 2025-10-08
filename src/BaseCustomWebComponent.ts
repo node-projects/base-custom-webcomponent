@@ -227,7 +227,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         if (nm[0] == '.')
                             nm = nm.substring(1);
                         let value = attributeValues[0];
-                        let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? 'input' : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
+                        let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? (nm === 'checked' ? 'change' : 'input') : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
                         if (attributeValues.length > 1 && attributeValues[1])
                             event = attributeValues[1];
                         const camelCased = nm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
@@ -492,14 +492,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     (<Element>node).appendChild(value);
                 } else {
                     if (property[0] === '$') {
-                        if (!value && noNull)
+                        if (!!value && noNull)
                             (<Element>node).setAttribute(property.substring(1), '');
                         else if (!value)
                             (<Element>node).removeAttribute(property.substring(1));
                         else
                             (<Element>node).setAttribute(property.substring(1), value);
                     } else if (property[0] === '?') {
-                        if (!value == true)
+                        if (!!value)
                             (<Element>node).setAttribute(property.substring(1), '');
                         else
                             (<Element>node).removeAttribute(property.substring(1));
