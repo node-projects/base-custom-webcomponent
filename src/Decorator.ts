@@ -10,7 +10,7 @@ export function customElement(tagname: string) {
 }
 
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition; reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
+type propertyComplexDefinition = { type: propertySimpleDefinition; readonly?: boolean, reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 declare global {
@@ -46,7 +46,7 @@ const legacyProperty = (
     }
     if (par && (<propertyComplexDefinition>par).type != null) {
         //@ts-ignore
-        proto.constructor.properties[name] = (<propertyComplexDefinition>par).type ? (<propertyComplexDefinition>par).type : String;
+        proto.constructor.properties[name] = (<propertyComplexDefinition>par);
     }
     else {
         //@ts-ignore
