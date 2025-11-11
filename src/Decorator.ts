@@ -10,7 +10,7 @@ export function customElement(tagname: string) {
 }
 
 type propertySimpleDefinition = Object | BooleanConstructor | DateConstructor | NumberConstructor | StringConstructor | ArrayConstructor | ObjectConstructor //| Object //| (new (...args: any[]) => object)
-type propertyComplexDefinition = { type: propertySimpleDefinition; readonly?: boolean, reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any };
+type propertyComplexDefinition = { type: propertySimpleDefinition; readonly?: boolean, reflect?: boolean, attribute?: string, noattribute?: boolean, default?: any, group?: string, description?: string };
 type propertyDefinition = propertyComplexDefinition | propertySimpleDefinition;
 
 declare global {
