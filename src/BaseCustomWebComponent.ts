@@ -489,7 +489,11 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     private _bindingSetNodeValue(firstRun: boolean, node: Node, attribute: Attr, property: string, expression: string, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, noNull: boolean, onlyWhenChanged: boolean) {
         try {
             const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
-            if (firstRun || node[property] !== value) {
+            var pName = property;
+            if (property[0] === '.' || property[1] === '$' || property[1] === '?')
+                pName = property.substring(1);
+
+            if (firstRun || node[pName] !== value) {
                 if (removeAttributes && attribute)
                     (<Element>node).removeAttribute(attribute.name);
                 if (property === 'innerHTML' && (value instanceof Element || value instanceof DocumentFragment)) {
@@ -501,28 +505,26 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 } else {
                     if (property[0] === '$') {
                         if (!!value && noNull)
-                            (<Element>node).setAttribute(property.substring(1), '');
+                            (<Element>node).setAttribute(pName, '');
                         else if (!value)
-                            (<Element>node).removeAttribute(property.substring(1));
+                            (<Element>node).removeAttribute(pName);
                         else
-                            (<Element>node).setAttribute(property.substring(1), value);
+                            (<Element>node).setAttribute(pName, value);
                     } else if (property[0] === '?') {
                         if (!!value)
-                            (<Element>node).setAttribute(property.substring(1), '');
+                            (<Element>node).setAttribute(pName, '');
                         else
-                            (<Element>node).removeAttribute(property.substring(1));
-                    }
-                    else if (property == 'class')
+                            (<Element>node).removeAttribute(pName);
+                    } else if (property == 'class')
                         (<Element>node).setAttribute(property, value);
                     else {
-                        if (property[0] === '.')
-                            property = property.substring(1);
+
                         if (!value && noNull) {
-                            if (!onlyWhenChanged || node[property] != value)
-                                node[property] = '';
+                            if (!onlyWhenChanged || node[pName] != value)
+                                node[pName] = '';
                         } else {
-                            if (!onlyWhenChanged || node[property] != value)
-                                node[property] = value;
+                            if (!onlyWhenChanged || node[pName] != value)
+                                node[pName] = value;
                         }
                     }
                 }
