@@ -688,7 +688,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
         if (template) {
             //@ts-ignore
-            this._rootDocumentFragment = document.importNode(template.content, true);
+            this._rootDocumentFragment = template.content.cloneNode(true);
+            //this._rootDocumentFragment = document.importNode(template.content, true); 
+            // -> this does not work the same, has diferent timing. child "readys" are called before parent ready...
         }
 
         //@ts-ignore
