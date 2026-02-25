@@ -673,7 +673,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     static instanceCreatedCallback: (i: BaseCustomWebComponentNoAttachedTemplate) => void;
 
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
         super();
 
         if (BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback)
@@ -687,10 +687,13 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             template = this.constructor.template;
         }
         if (template) {
-            //@ts-ignore
-            this._rootDocumentFragment = template.content.cloneNode(true);
-            //this._rootDocumentFragment = document.importNode(template.content, true); 
-            // -> this does not work the same, has diferent timing. child "readys" are called before parent ready...
+            if (useImportNode) {
+                //@ts-ignore
+                this._rootDocumentFragment = template.content.cloneNode(true);
+            } else {
+                this._rootDocumentFragment = document.importNode(template.content, true);
+                // -> this does not work the same, has different timing. child "readys" are called before parent ready...
+            }
         }
 
         //@ts-ignore
