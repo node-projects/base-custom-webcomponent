@@ -738,8 +738,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 }
 
 export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAttachedTemplate {
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style);
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
+        super(template, style, useImportNode);
 
         queueMicrotask(() => {
             if (this._rootDocumentFragment)
@@ -760,7 +760,7 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
 }
 
 export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebComponentNoAttachedTemplate {
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
         super(template, style);
 
         queueMicrotask(() => {
@@ -783,8 +783,8 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
 }
 
 export class BaseCustomWebComponentLazyAppendConnectedReady extends BaseCustomWebComponentNoAttachedTemplate {
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style);
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
+        super(template, style, useImportNode);
 
         queueMicrotask(() => {
             if (this._rootDocumentFragment)
@@ -804,8 +804,8 @@ export class BaseCustomWebComponentLazyAppendConnectedReady extends BaseCustomWe
 }
 
 export class BaseCustomWebComponentConnectedReady extends BaseCustomWebComponentNoAttachedTemplate {
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style);
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
+        super(template, style, useImportNode);
 
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
@@ -823,8 +823,8 @@ export class BaseCustomWebComponentConnectedReady extends BaseCustomWebComponent
 }
 
 export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustomWebComponentNoAttachedTemplate {
-    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet) {
-        super(template, style);
+    constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
+        super(template, style, useImportNode);
 
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
