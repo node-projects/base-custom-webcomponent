@@ -490,7 +490,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         try {
             const value = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
             var pName = property;
-            if (property[0] === '.' || property[1] === '$' || property[1] === '?')
+            if (property[0] === '.' || property[0] === '$' || property[0] === '?')
                 pName = property.substring(1);
 
             if (firstRun || node[pName] !== value) {
