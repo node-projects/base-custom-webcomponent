@@ -167,8 +167,8 @@ export class HotModuleReplacement {
         for (let link of document.querySelectorAll<HTMLLinkElement>(`link[href*="${file}"]`))
             link.href = link.href.split("?")[0] + "?reload=" + newId;
 
-        const oldCssModule = await import(file, { assert: { type: 'css' } });
-        const newCssModule = await import(file + "?reload=" + newId, { assert: { type: 'css' } });
+        const oldCssModule = await import(file, { with: { type: 'css' } });
+        const newCssModule = await import(file + "?reload=" + newId, { with: { type: 'css' } });
         const oldStylesheet: CSSStyleSheet = oldCssModule.default;
         const newStylesheet: CSSStyleSheet = newCssModule.default;
         oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
