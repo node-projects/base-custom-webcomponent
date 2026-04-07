@@ -680,7 +680,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback(this);
 
         if (!this.shadowRoot)
-            this.attachShadow({ mode: 'open' });
+            this.attachShadow({ mode: 'open', serializable: true });
 
         if (!template) {
             //@ts-ignore
