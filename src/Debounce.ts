@@ -8,7 +8,7 @@ export function debounce(func: (...args) => any, wait: number, immediate: boolea
 
         let later = function () {
             timeout = null;
-            if (!immediate) func.apply(context, args);
+            if (!immediate) func.apply(context, <any>args);
         };
 
         let callNow = immediate && !timeout;
@@ -17,6 +17,6 @@ export function debounce(func: (...args) => any, wait: number, immediate: boolea
 
         timeout = setTimeout(later, wait);
 
-        if (callNow) func.apply(context, args);
+        if (callNow) func.apply(context, <any>args);
     };
 };
