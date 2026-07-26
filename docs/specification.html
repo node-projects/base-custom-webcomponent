@@ -872,7 +872,7 @@
         <ul class="checklist">
           <li>There is no render loop or virtual DOM.</li>
           <li>State changes do not schedule updates automatically.</li>
-          <li>Each call to <code>_bindingsRefresh()</code> reevaluates all registered bindings.</li>
+          <li>A named <code>_bindingsRefresh(property)</code> selects direct dependencies; an unnamed refresh reevaluates all bindings.</li>
           <li>Property declarations guide attribute conversion; they are not observers.</li>
           <li>Static template and style members are shared by every instance of a subclass.</li>
           <li><code>ready()</code> is library-defined and its timing depends on the selected base class.</li>
@@ -1154,13 +1154,16 @@ customElements.define(CounterCard.is, CounterCard);</code></pre>
 
 setStatus(status: string): void {
   this.status = status;
-  this._bindingsRefresh();
+  this._bindingsRefresh('status');
 }</code></pre>
         </div>
         <p>
-          The <code>property</code> argument accepted by
-          <code>_bindingsRefresh(property)</code> does not currently filter
-          bindings. Every registered expression is evaluated.
+          The parser records direct top-level dependencies such as
+          <code>this.status</code>. A named refresh evaluates matching bindings
+          and repeat descendants sourced from that property. A refresh without
+          a property retains the refresh-all behavior. Method calls, dynamic
+          bracket access, and unknown context expressions remain conservatively
+          subscribed to every targeted refresh.
         </p>
 
         <h3>One-way targets</h3>
@@ -1285,9 +1288,13 @@ setStatus(status: string): void {
           </article>
         </div>
         <p>
-          Iterables are converted to arrays. On detected change, old entries are
-          removed and all new entries are cloned; reconciliation is not keyed.
-          Wrap each repeated item in at least one top-level element.
+          Iterables are converted to arrays. Instances are reconciled by item
+          identity: unchanged nodes are retained, reordered nodes are moved,
+          new identities are cloned, and removed identities are detached.
+          Duplicate values are matched in occurrence order. There is not yet an
+          explicit application-key expression, so equivalent replacement
+          objects are treated as new identities. Wrap each repeated item in at
+          least one top-level element.
         </p>
       </section>
 
@@ -1459,7 +1466,7 @@ setStatus(status: string): void {
             </tr>
             <tr>
               <td><span class="signature">_bindingsRefresh(property?, onlyWhenChanged?): void</span></td>
-              <td>Runs all registered binding functions. <code>property</code> is currently unused.</td>
+              <td>Runs bindings associated with a top-level property, or all bindings when no property is supplied.</td>
             </tr>
             <tr>
               <td><span class="signature">_parseAttributesToProperties(noBindings?): void</span></td>
@@ -1692,10 +1699,11 @@ setStatus(status: string): void {
           </article>
           <article class="card">
             <span class="card-number">P1 / SCALE</span>
-            <h3>Targeted updates</h3>
+            <h3>Explicit repeat keys</h3>
             <p>
-              Record property dependencies, filter refresh work, and reconcile
-              repeats with keys instead of rebuilding every row.
+              Property dependencies are now filtered and repeat instances are
+              retained by identity. Add an explicit key expression so immutable
+              replacement objects can preserve stateful row DOM as well.
             </p>
           </article>
           <article class="card">

@@ -113,7 +113,7 @@ export class CounterCard extends BaseCustomWebComponentConstructorAppend {
 
   increment(): void {
     this.count += 1;
-    this._bindingsRefresh();
+    this._bindingsRefresh('count');
   }
 }
 
@@ -332,7 +332,8 @@ exported.
 ## Binding grammar
 
 Bindings are optional. Activate them with `_bindingsParse()` and refresh them
-after state changes with `_bindingsRefresh()`.
+after state changes with `_bindingsRefresh()`. Pass a top-level property name
+to refresh only expressions that can depend on it.
 
 ### One-way bindings
 
@@ -419,19 +420,34 @@ removed.
 - `nodes` contains the cloned top-level elements.
 - `callbackType` is `"create"` or `"remove"`.
 
-Any iterable is accepted and converted to an array. A changed collection is
-currently redrawn rather than keyed or incrementally reconciled.
+Any iterable is accepted and converted to an array. Repeated instances are
+reconciled by item identity:
+
+- unchanged items keep their existing DOM nodes;
+- reordered items move their existing nodes;
+- new identities create new instances; and
+- removed identities run the remove callback and detach their nodes.
+
+Duplicate values are matched in occurrence order. There is no explicit key
+expression yet, so replacing an object with a new object that has the same
+logical ID still creates a new repeat instance.
 
 ### Refresh behavior
 
 ```ts
 this.message = 'Saved';
-this._bindingsRefresh();
+this._bindingsRefresh('message');
 ```
 
-The optional `property` argument is currently not used to filter work, so every
-registered binding is evaluated on each refresh. `onlyWhenChanged` can prevent
-some redundant assignments but does not prevent expression evaluation.
+The parser records direct top-level dependencies such as `this.message`.
+`_bindingsRefresh('message')` evaluates matching bindings and bindings nested
+under a repeat sourced from that property. Calling `_bindingsRefresh()` without
+a property retains the refresh-all behavior.
+
+Dynamic bracket access, component method calls, and expressions whose
+dependencies cannot be determined statically remain conservatively subscribed
+to every targeted refresh. `onlyWhenChanged` can prevent some redundant DOM
+assignments after an expression has been evaluated.
 
 ## Declarative custom elements
 
@@ -549,8 +565,9 @@ named event wiring can be used without the expression binding engine.
 
 ## Known limitations
 
-- Bindings are manually refreshed and all bindings rerun on each refresh.
-- Repeats redraw changed collections and do not use keys.
+- Bindings are manually refreshed; method calls and dynamic expressions cannot
+  be dependency-filtered precisely.
+- Repeats reconcile by identity but do not support explicit application keys.
 - Expression bindings are not compatible with strict `script-src` CSP.
 - Standard ECMAScript decorators are not implemented.
 - Property declarations do not observe later attribute changes.

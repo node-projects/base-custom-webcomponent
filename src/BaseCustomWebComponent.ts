@@ -44,7 +44,23 @@ export const cssFromString = function (value: string | CSSStyleSheet | any): CSS
     return cssStyleSheet;
 };
 
-type repeatBindingItem = { name: string, item: any }
+type bindingFunction = (firstRun?: boolean, onlyWhenChanged?: boolean) => void;
+type bindingRegistration = [
+    binding: bindingFunction,
+    properties: string[] | null,
+    repeatBindingItems?: repeatBindingItem[],
+];
+type repeatBindingItem = {
+    name: string,
+    item: any,
+    sourceProperties?: string[] | null,
+};
+type repeatBindingInstance = {
+    value: any,
+    nodes: Node[],
+    bindings: bindingRegistration[],
+    repeatBindingItems: repeatBindingItem[],
+};
 
 let _bindingRegex = /\[\[.*?\]\]/g;
 
@@ -52,9 +68,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet> | CSSStyleSheet[];
     static readonly template: HTMLTemplateElement;
 
-    //todo: bindings map should contain the name of the bound property
-    protected _bindings: [binding: ((firstRun?: boolean, onlyWhenChanged?: boolean) => void), name: string][];
-    protected _repeatBindings: WeakMap<Node, [binding: ((firstRun?: boolean) => void), name: string][]>;
+    protected _bindings: bindingRegistration[];
+    protected _repeatBindings: WeakMap<Node, bindingRegistration[]>;
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
     protected _noWarningOnBindingErrors;
@@ -129,6 +144,51 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         this._bindingsInternalParse(node, null, removeAttributes, host, context, useSignals);
     }
 
+    private _getBindingProperties(expression: string, repeatBindingItems?: repeatBindingItem[]): string[] | null {
+        if (!expression)
+            return [];
+
+        // Dynamic property access and component method calls can read arbitrary
+        // state, so they remain subscribed to every targeted refresh.
+        if (/\bthis\s*(?:\?\.)?\s*\[/.test(expression))
+            return null;
+
+        const properties = new Set<string>();
+        let dependencyFound = false;
+        const propertyRegex = /\bthis\s*(?:\?\.|\.)\s*([A-Za-z_$][\w$]*)/g;
+        for (const match of expression.matchAll(propertyRegex)) {
+            const remainder = expression.substring(match.index + match[0].length);
+            if (/^\s*(?:\?\.)?\s*\(/.test(remainder))
+                return null;
+            dependencyFound = true;
+            properties.add(match[1]);
+        }
+
+        if (repeatBindingItems) {
+            for (const repeatBindingItem of repeatBindingItems) {
+                const escapedName = repeatBindingItem.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                if (new RegExp(`\\b${escapedName}\\b`).test(expression)) {
+                    dependencyFound = true;
+                    if (repeatBindingItem.sourceProperties == null)
+                        return null;
+                    for (const property of repeatBindingItem.sourceProperties)
+                        properties.add(property);
+                }
+            }
+        }
+
+        // Bare identifiers can come from a binding context or global state.
+        // Keep those expressions subscribed unless they are simple literals.
+        if (!dependencyFound && !/^\s*(?:true|false|null|undefined|NaN|Infinity|-?\d+(?:\.\d+)?|(["']).*\1)\s*$/s.test(expression))
+            return null;
+
+        return Array.from(properties);
+    }
+
+    private _registerBinding(binding: bindingFunction, expression: string, repeatBindingItems?: repeatBindingItem[]) {
+        this._bindings.push([binding, this._getBindingProperties(expression, repeatBindingItems), repeatBindingItems]);
+    }
+
     private _bindingsInternalParse(startNode: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, useSignals = false) {
         if (!this._bindings)
             this._bindings = [];
@@ -152,20 +212,20 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
-                            this._bindings.push([b, null]);
+                            this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('class:')) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                             const b = () => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
-                            this._bindings.push([b, null]);
+                            this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('bcw:')) {
                             if (a.name === 'bcw:visible') {
                                 const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                                 const display = node.style.display;
                                 const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'display', value + "?'" + display + "':'none'", repeatBindingItems, host, context);
-                                this._bindings.push([b, null]);
+                                this._registerBinding(b, value, repeatBindingItems);
                                 b();
                             }
                         } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
@@ -174,12 +234,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const elementsCache: Node[] = [];
                             const b = () => this._bindingConditional(<HTMLTemplateElement>node, value, repeatBindingItems, elementsCache, host, context);
-                            this._bindings.push([b, null]);
+                            this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('repeat:')) {
                             const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
                             const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                            const elementsCache: Node[] = [];
+                            const instances: repeatBindingInstance[] = [];
                             let bindingIndexname = 'index';
                             let changeItemCallback = null;
                             const indexNameAttribute = attributes.find(x => x.name == 'repeat-index');
@@ -188,8 +248,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             const changeItemCallbackAttribute = attributes.find(x => x.name == 'repeat-changed-item-callback');
                             if (changeItemCallbackAttribute)
                                 changeItemCallback = changeItemCallbackAttribute.value;
-                            const b = () => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, elementsCache, host, context);
-                            this._bindings.push([b, null]);
+                            const b = () => this._bindingRepeat(<HTMLTemplateElement>node, bindingItemVariableName, bindingIndexname, value, changeItemCallback, repeatBindingItems, instances, host, context);
+                            this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name[0] === '@') { //todo remove events on repeat refresh
                             let nm;
@@ -218,7 +278,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 noNull = true;
                             }
                             const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
-                            this._bindings.push([b, null]);
+                            this._registerBinding(b, value, repeatBindingItems);
                             b(true, false);
                         }
                     } else if (a.value[0] === '{' && a.value[1] === '{' && a.value[a.value.length - 1] === '}' && a.value[a.value.length - 2] === '}') {
@@ -237,7 +297,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                             noNull = true;
                         }
                         const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, camelCased, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
-                        this._bindings.push([b, null]);
+                        this._registerBinding(b, value, repeatBindingItems);
                         b(true, false);
                         if (event) {
                             for (let x of event.split(';')) {
@@ -302,7 +362,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             noNull = true;
         }
         const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
-        this._bindings.push([b, null]);
+        this._registerBinding(b, value, repeatBindingItems);
         b(true, false);
     }
 
@@ -404,82 +464,131 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
-    oldValuesSymbol = Symbol('oldValuesSymbol');
-
-    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], elementsCache: Node[], host: any, context: any) {
+    private _bindingRepeat(node: HTMLTemplateElement, bindingProperty: string, bindingIndexName: string, expression: string, callback: string, repeatBindingItems: repeatBindingItem[], instances: repeatBindingInstance[], host: any, context: any) {
         try {
-            let values: [] = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
-            if (values && !Array.isArray(values))
-                values = [...values];
-            const oldValue = node[this.oldValuesSymbol];
-            if (oldValue !== values && (oldValue?.length !== values?.length || (values.some((x, i) => x !== oldValue?.[i])))) {
-                if (Array.isArray(values))
-                    node[this.oldValuesSymbol] = [...values];
-                else
-                    node[this.oldValuesSymbol] = values;
+            const evaluatedValues = this._bindingRunEval(expression, repeatBindingItems, null, host, context, node);
+            const values: any[] = evaluatedValues == null
+                ? []
+                : (Array.isArray(evaluatedValues) ? evaluatedValues : [...evaluatedValues]);
 
-                if (callback) {
-                    if (callback.startsWith('[[') && callback.endsWith(']]'))
-                        callback = callback.substring(2, callback.length - 2);
-                    else
-                        callback = "this." + callback;
+            if (instances.length === values.length && values.every((value, index) => Object.is(value, instances[index].value)))
+                return;
+
+            const callbackExpression = callback
+                ? (callback.startsWith('[[') && callback.endsWith(']]')
+                    ? callback.substring(2, callback.length - 2)
+                    : "this." + callback)
+                : null;
+            const sourceProperties = this._getBindingProperties(expression, repeatBindingItems);
+            const availableInstances = new Map<any, repeatBindingInstance[]>();
+            for (const instance of instances) {
+                let available = availableInstances.get(instance.value);
+                if (!available) {
+                    available = [];
+                    availableInstances.set(instance.value, available);
                 }
-                for (let c of elementsCache) {
-                    if (c.parentNode) {
-                        let intRepeatBindingItems: repeatBindingItem[] = [];
-                        intRepeatBindingItems.push({ name: 'nodes', item: [c] });
-                        intRepeatBindingItems.push({ name: 'callbackType', item: 'remove' });
-                        this._bindingRunEval(callback, intRepeatBindingItems, null, host, context, node);
-                        const bnds = this._repeatBindings.get(c);
-                        if (bnds?.length) {
-                            for (const b of bnds) {
-                                const idx = this._bindings.indexOf(b);
-                                if (idx >= 0)
-                                    this._bindings.splice(idx, 1);
-                            }
+                available.push(instance);
+            }
+
+            if (!this._repeatBindings)
+                this._repeatBindings = new WeakMap();
+
+            const nextInstances: repeatBindingInstance[] = [];
+            for (let index = 0; index < values.length; index++) {
+                const value = values[index];
+                const available = availableInstances.get(value);
+                let instance = available?.shift();
+
+                if (instance) {
+                    instance.value = value;
+                    for (let itemIndex = instance.repeatBindingItems.length - 1; itemIndex >= 0; itemIndex--) {
+                        const item = instance.repeatBindingItems[itemIndex];
+                        if (item.name === bindingProperty) {
+                            item.item = value;
+                            item.sourceProperties = sourceProperties;
+                            break;
                         }
-                        c.parentNode.removeChild(c);
                     }
+                    for (let itemIndex = instance.repeatBindingItems.length - 1; itemIndex >= 0; itemIndex--) {
+                        const item = instance.repeatBindingItems[itemIndex];
+                        if (item.name === bindingIndexName) {
+                            item.item = index;
+                            item.sourceProperties = sourceProperties;
+                            break;
+                        }
+                    }
+                } else {
+                    const intRepeatBindingItems = repeatBindingItems ? repeatBindingItems.slice() : [];
+                    intRepeatBindingItems.push({ name: bindingProperty, item: value, sourceProperties });
+                    intRepeatBindingItems.push({ name: bindingIndexName, item: index, sourceProperties });
+
+                    const fragment = document.importNode(node.content, true);
+                    const bindingCount = this._bindings.length;
+                    this._bindingsInternalParse(fragment, intRepeatBindingItems, true, host, context);
+                    const bindings = this._bindings.slice(bindingCount);
+                    let nodes = Array.from(fragment.childNodes);
+
+                    if (callbackExpression) {
+                        const callbackItems = intRepeatBindingItems.slice();
+                        callbackItems.push({ name: 'nodes', item: nodes });
+                        callbackItems.push({ name: 'callbackType', item: 'create' });
+                        const callbackNodes = this._bindingRunEval(callbackExpression, callbackItems, null, host, context, node);
+                        if (callbackNodes !== undefined)
+                            nodes = callbackNodes ? Array.from(callbackNodes) : [];
+                    }
+
+                    instance = {
+                        value,
+                        nodes,
+                        bindings,
+                        repeatBindingItems: intRepeatBindingItems,
+                    };
+                    for (const repeatedNode of nodes)
+                        this._repeatBindings.set(repeatedNode, bindings);
                 }
-                elementsCache.length = 0;
 
+                nextInstances.push(instance);
+            }
 
-                if (values) {
-                    if (!this._repeatBindings)
-                        this._repeatBindings = new WeakMap();
+            for (const available of availableInstances.values()) {
+                for (const instance of available) {
+                    if (callbackExpression) {
+                        const callbackItems = instance.repeatBindingItems.slice();
+                        callbackItems.push({ name: 'nodes', item: instance.nodes });
+                        callbackItems.push({ name: 'callbackType', item: 'remove' });
+                        this._bindingRunEval(callbackExpression, callbackItems, null, host, context, node);
+                    }
 
-                    //todo -> copy values to compare and only generate new controls...
-                    let i = 0;
-                    for (let e of values) {
-                        let intRepeatBindingItems: repeatBindingItem[] = [];
-                        if (repeatBindingItems)
-                            intRepeatBindingItems = repeatBindingItems.slice();
-                        intRepeatBindingItems.push({ name: bindingProperty, item: e });
-                        intRepeatBindingItems.push({ name: bindingIndexName, item: i });
-                        let nd = document.importNode(node.content, true);
-                        elementsCache.push(...nd.children);
-                        const bndCount = this._bindings.length;
-                        this._bindingsInternalParse(nd, intRepeatBindingItems, true, host, context);
-                        this._repeatBindings.set(nd.children[0], this._bindings.toSpliced(0, bndCount));
-
-                        if (callback) {
-                            intRepeatBindingItems.push({ name: 'nodes', item: [...nd.children] });
-                            intRepeatBindingItems.push({ name: 'callbackType', item: 'create' });
-                            let nds = this._bindingRunEval(callback, intRepeatBindingItems, null, host, context, node);
-                            if (nds === undefined)
-                                nds = nd.children;
-                            if (nds) {
-                                for (let n of Array.from(nds))
-                                    node.parentNode.insertBefore(<Node>n, node);
-                            }
+                    let ownerItem: repeatBindingItem;
+                    for (let itemIndex = instance.repeatBindingItems.length - 1; itemIndex >= 0; itemIndex--) {
+                        if (instance.repeatBindingItems[itemIndex].name === bindingProperty) {
+                            ownerItem = instance.repeatBindingItems[itemIndex];
+                            break;
                         }
-                        else {
-                            node.parentNode.insertBefore(nd, node);
-                        }
-                        i++;
+                    }
+                    for (let bindingIndex = this._bindings.length - 1; bindingIndex >= 0; bindingIndex--) {
+                        if (ownerItem && this._bindings[bindingIndex][2]?.includes(ownerItem))
+                            this._bindings.splice(bindingIndex, 1);
+                    }
+                    for (const repeatedNode of instance.nodes)
+                        repeatedNode.parentNode?.removeChild(repeatedNode);
+                }
+            }
+
+            if (node.parentNode) {
+                let referenceNode: Node = node;
+                for (let instanceIndex = nextInstances.length - 1; instanceIndex >= 0; instanceIndex--) {
+                    const instance = nextInstances[instanceIndex];
+                    for (let nodeIndex = instance.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
+                        const repeatedNode = instance.nodes[nodeIndex];
+                        if (repeatedNode.nextSibling !== referenceNode)
+                            node.parentNode.insertBefore(repeatedNode, referenceNode);
+                        referenceNode = repeatedNode;
                     }
                 }
             }
+
+            instances.splice(0, instances.length, ...nextInstances);
         } catch (error) {
             if (!this._noWarningOnBindingErrors)
                 console.warn((<Error>error).message, 'Failed to bind Repeat "' + bindingProperty + '" to expression "' + expression + '"', this, node);
@@ -564,8 +673,26 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     }
 
     protected _bindingsRefresh(property?: string, onlyWhenChanged?: boolean) {
-        if (this._bindings)
-            this._bindings.forEach(x => x[0](false, onlyWhenChanged));
+        if (!this._bindings)
+            return;
+
+        let rootProperty = property;
+        if (rootProperty?.startsWith('this.'))
+            rootProperty = rootProperty.substring(5);
+        if (rootProperty)
+            rootProperty = rootProperty.split(/[.\[]/, 1)[0];
+
+        // Bindings can add or remove nested registrations while they run.
+        // Iterate a snapshot, but skip registrations removed by an earlier
+        // repeat/conditional update in the same refresh.
+        for (const registration of this._bindings.slice()) {
+            if (!this._bindings.includes(registration))
+                continue;
+            const properties = registration[1];
+            if (rootProperty && properties !== null && !properties.includes(rootProperty))
+                continue;
+            registration[0](false, onlyWhenChanged);
+        }
     }
 
     protected _bindingsSetValue(obj, path: string, value: any, context: any, repeatBindingItems?: repeatBindingItem[]) {
