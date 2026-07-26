@@ -577,6 +577,27 @@ Consequences:
 The base class, static templates/styles, attribute parsing, DOM helpers, and
 named event wiring can be used without the expression binding engine.
 
+## Runnable samples
+
+The sample hub links three focused, interactive pages:
+
+| Page | Demonstrates |
+| --- | --- |
+| [Sample hub](./sample/index.html) | Overview and navigation between all examples. |
+| [Counter](./sample/counter.html) | Lifecycle setup, typed attributes, named events, and targeted refreshes. |
+| [Binding playground](./sample/bindings.html) | Safe text, trusted HTML, class and property targets, conditions, and repeats. |
+| [Declarative component](./sample/declarative.html) | HTML-defined elements, typed reflected properties, adopted styles, and bindings. |
+
+Build the library and sample TypeScript, then launch the local server:
+
+```sh
+npm run check
+npm start
+```
+
+The browser regression suite loads each page and exercises its primary
+interaction, so the examples are checked alongside the public API.
+
 ## Known limitations
 
 - Bindings are manually refreshed; method calls and dynamic expressions cannot
@@ -605,9 +626,9 @@ Available scripts:
 | `npm run build` | Compile the library and create the minified bundle. |
 | `npm run tsc` | Compile `src/` to `dist/` and emit declarations. |
 | `npm run bundle` | Bundle and minify `dist/index.js` into `dist/index-min.js`. |
-| `npm test` | Compile the library and run the browser regression suite once. |
+| `npm test` | Compile the library and samples, then run the browser regression suite once. |
 | `npm run test:watch` | Run browser tests continuously while developing. |
-| `npm run test:coverage` | Run browser tests with an Istanbul coverage report. |
+| `npm run test:coverage` | Compile library and samples, enforce the coverage baseline, and write an Istanbul report. |
 | `npm run check` | Run the library build, demo compile, and browser tests. |
 | `npm start` | Serve and open `sample/index.html`. Run the build first. |
 | `npm run tsc-demo` | Compile the demo application. |

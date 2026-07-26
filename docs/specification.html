@@ -751,7 +751,8 @@
           <li><a href="#hmr">10 · HMR</a></li>
           <li><a href="#security">11 · Security model</a></li>
           <li><a href="#compatibility">12 · Compatibility</a></li>
-          <li><a href="#limitations">13 · Limits &amp; roadmap</a></li>
+          <li><a href="#samples">13 · Runnable samples</a></li>
+          <li><a href="#limitations">14 · Limits &amp; roadmap</a></li>
         </ol>
       </nav>
       <div class="sidebar-meta">
@@ -1693,9 +1694,59 @@ setStatus(status: string): void {
         </p>
       </section>
 
+      <section id="samples">
+        <div class="section-head">
+          <span class="section-no">13 / SAMPLES</span>
+          <h2>Runnable examples</h2>
+          <p>
+            The repository includes a sample hub and three focused pages. They
+            are compiled and exercised by the browser test suite so the
+            examples stay aligned with the implementation.
+          </p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <span class="card-number">01 / FUNDAMENTALS</span>
+            <h3><a href="../sample/counter.html">Counter component</a></h3>
+            <p>
+              Shows lifecycle setup, number and string attributes, named DOM
+              handlers, boolean targets, class targets, and property-specific
+              binding refreshes.
+            </p>
+          </article>
+          <article class="card">
+            <span class="card-number">02 / BINDINGS</span>
+            <h3><a href="../sample/bindings.html">Binding playground</a></h3>
+            <p>
+              Contrasts safe text with intentional HTML and demonstrates
+              property bindings, conditional templates, and reconciled repeats.
+            </p>
+          </article>
+          <article class="card">
+            <span class="card-number">03 / DECLARATIVE</span>
+            <h3><a href="../sample/declarative.html">Declarative definition</a></h3>
+            <p>
+              Defines a reusable element from HTML with typed reflected
+              properties, an adopted stylesheet, safe text, and repeated data.
+            </p>
+          </article>
+        </div>
+
+        <div class="code-block">
+          <div class="code-label">Build, verify, and serve</div>
+          <pre><code>npm run check
+npm start</code></pre>
+        </div>
+        <p>
+          Start at the <a href="../sample/index.html">sample hub</a> to navigate
+          between the pages.
+        </p>
+      </section>
+
       <section id="limitations">
         <div class="section-head">
-          <span class="section-no">13 / DIRECTION</span>
+          <span class="section-no">14 / DIRECTION</span>
           <h2>Known limits and next steps</h2>
           <p>
             The package's strengths are its small core and direct platform
@@ -1709,10 +1760,11 @@ setStatus(status: string): void {
             <span class="card-number">P0 / CONFIDENCE</span>
             <h3>Broaden test coverage</h3>
             <p>
-              The initial Chrome suite now covers lifecycle timing, binding
-              targets, repeats, conditional cleanup, property upgrades, and
-              listener disposal. Add cross-browser jobs, package assertions,
-              malformed inputs, and HMR branches next.
+              The Chrome suite now covers lifecycle timing, binding targets,
+              repeats, declarative elements, exported utilities, sample-page
+              interactions, property upgrades, and listener disposal. Add
+              cross-browser jobs, package assertions, malformed inputs, and
+              deeper dynamic-import HMR coverage next.
             </p>
           </article>
           <article class="card">

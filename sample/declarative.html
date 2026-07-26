@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Declarative custom-element definition sample.">
+    <title>Declarative · Base Custom WebComponent Samples</title>
+    <link rel="stylesheet" href="./shared.css">
+    <script type="module">
+        import '../dist/DeclaritiveBaseCustomWebcomponent.js';
+
+        const card = document.querySelector('sample-status-card');
+        document.querySelector('#set-ready').addEventListener('click', () => {
+            card.status = 'Ready';
+            card.message = 'The declarative property setter refreshed this view.';
+        });
+        document.querySelector('#set-review').addEventListener('click', () => {
+            card.status = 'Review';
+            card.message = '<strong>This string is displayed literally.</strong>';
+        });
+    </script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="./index.html">BCW <span>samples</span></a>
+        <nav aria-label="Samples">
+            <a href="./counter.html">Counter</a>
+            <a href="./bindings.html">Bindings</a>
+            <a aria-current="page" href="./declarative.html">Declarative</a>
+        </nav>
+    </header>
+
+    <node-projects-dce
+        name="sample-status-card"
+        enable-bindings
+        properties='{
+            "status":{"type":"String","reflect":true},
+            "message":{"type":"String","reflect":true},
+            "steps":"Array"
+        }'
+    >
+        <template>
+            <article class="status-card">
+                <p class="eyebrow">Defined in HTML</p>
+                <h2>[[text:this.status]]</h2>
+                <p class="message" bcw:text="[[this.message]]"></p>
+                <ul>
+                    <template repeat:step="[[this.steps]]">
+                        <li>
+                            <span class="step-number">[[text:index + 1]]</span>
+                            <span class="step-label">[[text:step]]</span>
+                        </li>
+                    </template>
+                </ul>
+            </article>
+        </template>
+        <style type="adopted-css">
+            :host {
+                display: block;
+                color: #eaf0ff;
+                font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            }
+
+            .status-card {
+                padding: clamp(1.5rem, 4vw, 2.5rem);
+                border: 1px solid rgba(245, 158, 11, .28);
+                border-radius: 1.5rem;
+                background:
+                    radial-gradient(circle at top right, rgba(245, 158, 11, .14), transparent 42%),
+                    linear-gradient(145deg, #111827, #0b1120);
+                box-shadow: 0 24px 70px rgba(2, 6, 23, .35);
+            }
+
+            .eyebrow {
+                margin: 0 0 .45rem;
+                color: #fbbf24;
+                font-size: .72rem;
+                font-weight: 800;
+                letter-spacing: .16em;
+                text-transform: uppercase;
+            }
+
+            h2 {
+                margin: 0;
+                font-size: clamp(2rem, 6vw, 3.5rem);
+            }
+
+            .message {
+                min-height: 1.6rem;
+                color: #cbd5e1;
+                line-height: 1.6;
+                overflow-wrap: anywhere;
+            }
+
+            ul {
+                display: grid;
+                gap: .65rem;
+                padding: 0;
+                list-style: none;
+            }
+
+            li {
+                display: flex;
+                align-items: center;
+                gap: .8rem;
+                padding: .8rem;
+                border: 1px solid #2d3748;
+                border-radius: .8rem;
+                background: rgba(8, 15, 30, .68);
+            }
+
+            .step-number {
+                display: grid;
+                flex: 0 0 auto;
+                width: 1.8rem;
+                height: 1.8rem;
+                place-items: center;
+                border-radius: .55rem;
+                background: #451a03;
+                color: #fcd34d;
+                font-size: .78rem;
+                font-weight: 800;
+            }
+
+            .step-label {
+                min-width: 0;
+            }
+        </style>
+    </node-projects-dce>
+
+    <main class="detail-page">
+        <section class="page-intro">
+            <p class="kicker">03 · Declarative components</p>
+            <h1>Define a reusable custom element without a JavaScript class.</h1>
+            <p class="lede">
+                The hidden definition below supplies a template, adopted CSS,
+                typed properties, reflection, safe text bindings, and a repeat.
+            </p>
+        </section>
+
+        <div class="demo-layout">
+            <div class="demo-stage">
+                <sample-status-card
+                    status="Review"
+                    message="No class declaration was required."
+                    steps='["Parse typed attributes","Clone the template","Refresh dependent bindings"]'
+                ></sample-status-card>
+                <div class="external-actions">
+                    <button id="set-ready" class="button primary">Set ready</button>
+                    <button id="set-review" class="button">Show literal markup</button>
+                </div>
+            </div>
+            <aside class="code-panel">
+                <p class="panel-label">Definition</p>
+                <pre><code>&lt;node-projects-dce
+  name="sample-status-card"
+  enable-bindings
+  properties='{
+    "status": {
+      "type": "String",
+      "reflect": true
+    }
+  }'
+&gt;
+  &lt;template&gt;...&lt;/template&gt;
+&lt;/node-projects-dce&gt;</code></pre>
+            </aside>
+        </div>
+    </main>
+</body>
+</html>

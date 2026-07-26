@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Safe text and binding language sample.">
+    <title>Bindings · Base Custom WebComponent Samples</title>
+    <link rel="stylesheet" href="./shared.css">
+    <script type="module" src="./dist/demo.js"></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="./index.html">BCW <span>samples</span></a>
+        <nav aria-label="Samples">
+            <a href="./counter.html">Counter</a>
+            <a aria-current="page" href="./bindings.html">Bindings</a>
+            <a href="./declarative.html">Declarative</a>
+        </nav>
+    </header>
+
+    <main class="detail-page">
+        <section class="page-intro">
+            <p class="kicker">02 · Binding language</p>
+            <h1>Choose literal text or intentional HTML at each target.</h1>
+            <p class="lede">
+                This playground compares <code>[[text:expression]]</code>,
+                <code>bcw:text</code>, and the compatible unprefixed HTML
+                behavior, then exercises conditions and repeat reconciliation.
+            </p>
+        </section>
+
+        <div class="demo-layout wide-stage">
+            <div class="demo-stage">
+                <sample-binding-playground></sample-binding-playground>
+            </div>
+            <aside class="code-panel">
+                <p class="panel-label">Safe inline text</p>
+                <pre><code>Welcome,
+[[text:this.userName]]</code></pre>
+                <p class="panel-label">Safe element content</p>
+                <pre><code>&lt;p bcw:text=
+  "[[this.message]]"
+&gt;&lt;/p&gt;</code></pre>
+                <p class="panel-label">Intentional HTML</p>
+                <pre><code>&lt;p&gt;
+  [[this.trustedMarkup]]
+&lt;/p&gt;</code></pre>
+            </aside>
+        </div>
+    </main>
+</body>
+</html>

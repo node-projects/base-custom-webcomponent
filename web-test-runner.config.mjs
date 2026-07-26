@@ -19,6 +19,12 @@ export default {
     coverageConfig: {
         include: ['dist/**/*.js'],
         exclude: ['dist/index-min.js'],
+        threshold: {
+            statements: 80,
+            branches: 95,
+            functions: 80,
+            lines: 75,
+        },
         report: true,
         reportDir: 'coverage',
     },

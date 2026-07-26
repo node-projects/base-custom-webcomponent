@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Lifecycle, attributes, events, and targeted binding sample.">
+    <title>Counter · Base Custom WebComponent Samples</title>
+    <link rel="stylesheet" href="./shared.css">
+    <script type="module" src="./dist/demo.js"></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="./index.html">BCW <span>samples</span></a>
+        <nav aria-label="Samples">
+            <a aria-current="page" href="./counter.html">Counter</a>
+            <a href="./bindings.html">Bindings</a>
+            <a href="./declarative.html">Declarative</a>
+        </nav>
+    </header>
+
+    <main class="detail-page">
+        <section class="page-intro">
+            <p class="kicker">01 · Component fundamentals</p>
+            <h1>Lifecycle, attributes, and events working together.</h1>
+            <p class="lede">
+                The element reads typed attributes during <code>ready()</code>,
+                wires named event handlers, and refreshes only bindings that
+                depend on <code>count</code>.
+            </p>
+        </section>
+
+        <div class="demo-layout">
+            <div class="demo-stage">
+                <sample-counter count="3" label="Release confidence"></sample-counter>
+            </div>
+            <aside class="code-panel">
+                <p class="panel-label">Page markup</p>
+                <pre><code>&lt;sample-counter
+  count="3"
+  label="Release confidence"
+&gt;&lt;/sample-counter&gt;</code></pre>
+                <p class="panel-label">Refresh strategy</p>
+                <pre><code>this.count++;
+this._bindingsRefresh('count');</code></pre>
+            </aside>
+        </div>
+
+        <section class="concept-grid">
+            <article>
+                <span>Typed input</span>
+                <h2>Static property metadata</h2>
+                <p>The <code>count</code> attribute is converted to a number before its first binding refresh.</p>
+            </article>
+            <article>
+                <span>Native events</span>
+                <h2>Named handlers</h2>
+                <p>Buttons use <code>@click="increment"</code> without evaluating an expression.</p>
+            </article>
+            <article>
+                <span>Focused updates</span>
+                <h2>Dependency filtering</h2>
+                <p>Only bindings associated with the changed top-level property are reevaluated.</p>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

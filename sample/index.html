@@ -1,108 +1,65 @@
-<html>
-
+<!doctype html>
+<html lang="en">
 <head>
-    <script type="module">
-        import { BaseCustomWebComponentConstructorAppend } from "../dist/BaseCustomWebComponent.js";
-        class MyElement extends BaseCustomWebComponentConstructorAppend {
-            static properties = {
-                list: Array
-            }
-
-            constructor() {
-                super();
-                this._restoreCachedInititalValues();
-            }
-
-            ready() {
-                this._parseAttributesToProperties();
-                this._assignEvents();
-                this._bindingsParse();
-            }
-        }
-
-        customElements.define("my-element", MyElement);
-    </script>
-    <script type="module" src="../dist/DeclaritiveBaseCustomWebcomponent.js"></script>
-    <script type="module" src="../node_modules/polyfill-symbol-metadata/index.js"></script>
-    <script type="module" src="./dist/demo.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Runnable examples for @node-projects/base-custom-webcomponent.">
+    <title>Base Custom WebComponent · Samples</title>
+    <link rel="stylesheet" href="./shared.css">
 </head>
-
 <body>
-    <h1>DSD Demo</h1>
-    <my-element list='["aa","bb"]' style="display: flex; flex-direction: column; gap: 5px;">
-        <template shadowrootmode="open">
-            <button id="test">Test</button>
-            <template repeat:myitem="[[this.list]]">
-                <button>[[myitem]] - [[index]]</button>
-            </template>
-        </template>
-    </my-element>
-    <br><br>
-    <h1>DCE Demo</h1>
-    <node-projects-dce name="simple-dce-demo" enable-bindings
-        properties='{"list":"Array","ctx":{"type":"String","reflect":true}}'>
-        <template>
-            <style>
-                h1 {
-                    color: blue
-                }
-            </style>
-            <h1>Hello World</h1>
-            <div>[[this.ctx]]</div>
-            <template repeat:myitem="[[this.list]]">
-                <button @click="[[this.ctx = myitem]]"
-                    $aaaonclick="[['this.getRootNode().host.ctx = \'' + myitem + '\'']]">[[myitem]] - [[index]]</button>
-            </template>
-        </template>
-        <style type="adopted-css">
-            button {
-                color: green;
-            }
-        </style>
-    </node-projects-dce>
+    <header class="site-header">
+        <a class="brand" href="./index.html">BCW <span>samples</span></a>
+        <a class="quiet-link" href="../docs/specification.html">Specification ↗</a>
+    </header>
 
-    <simple-dce-demo list='["aa","bb"]' ctx="test">
-    </simple-dce-demo>
+    <main>
+        <section class="hero">
+            <p class="kicker">Native web components, deliberately small</p>
+            <h1>Learn the library through focused, runnable examples.</h1>
+            <p class="lede">
+                Each page isolates one part of the API, includes interaction,
+                and uses only browser primitives plus the compiled library.
+            </p>
+            <div class="hero-actions">
+                <a class="button primary" href="./counter.html">Start with lifecycle</a>
+                <a class="button" href="../README.md">Read the guide</a>
+            </div>
+        </section>
 
-    <br><br>
+        <section class="sample-grid" aria-label="Sample pages">
+            <a class="sample-card cyan" href="./counter.html">
+                <span class="card-number">01</span>
+                <h2>Counter component</h2>
+                <p>Template and style tags, typed attributes, named events, and targeted refreshes.</p>
+                <span class="card-link">Open sample →</span>
+            </a>
+            <a class="sample-card violet" href="./bindings.html">
+                <span class="card-number">02</span>
+                <h2>Binding playground</h2>
+                <p>Safe text, intentional HTML, properties, classes, conditions, and identity-based repeats.</p>
+                <span class="card-link">Open sample →</span>
+            </a>
+            <a class="sample-card amber" href="./declarative.html">
+                <span class="card-number">03</span>
+                <h2>Declarative definition</h2>
+                <p>Define and operate a custom element entirely from HTML, including typed reflected properties.</p>
+                <span class="card-link">Open sample →</span>
+            </a>
+        </section>
 
-    <node-projects-dce id="a" name="simple-dce-demo" enable-bindings
-        properties='{"list":"Array","ctx":{"type":"String","reflect":true}}'>
-        <template>
-            <style>
-                h1 {
-                    color: red
-                }
-            </style>
-            <h1>Hello World</h1>
-            <div>[[this.ctx]]</div>
-            <template repeat:myitem="[[this.list]]">
-                <button @click="[[this.ctx = myitem]]">[[myitem]] - [[index]]</button>
-            </template>
-            <template if="[[this.list == null]]">
-                <button>111</button>
-            </template>
-            <template if="[[this.list != null]]">
-                <button @click="[[this.list = null]]">222</button>
-            </template>
-        </template>
-        <style type="adopted-css">
-            button {
-                color: blue;
-            }
-        </style>
-    </node-projects-dce>
+        <section class="run-note">
+            <div>
+                <p class="kicker">Run locally</p>
+                <h2>One command after installing dependencies</h2>
+            </div>
+            <code>npm run build && npm start</code>
+        </section>
+    </main>
 
-    <simple-dce-demo list='["aa","bb"]' ctx="test">
-    </simple-dce-demo>
-
-    <br><br><br>
-
-    <a-a bb="Hallo wie gehts" style="border: 1px solid black; width: 200px; height: 200px; display: block;"></a-a>
-
-    <script>
-        setTimeout(() => a.upgradeAllInstances(), 2000);
-    </script>
+    <footer>
+        <span>@node-projects/base-custom-webcomponent</span>
+        <span>Dependency-free runtime</span>
+    </footer>
 </body>
-
 </html>
