@@ -556,16 +556,14 @@ named event wiring can be used without the expression binding engine.
 - Property declarations do not observe later attribute changes.
 - `ready()` timing varies by base class and is not a platform callback.
 - HMR is experimental and intended only for development.
-- The current repository has no automated test suite or CI workflow.
-- `npm run tsc-demo` needs a TypeScript 6 configuration update
-  (`rootDir` and modern module resolution); the library build itself passes.
 
 ## Development
 
+The development toolchain requires Node.js 22 or newer.
+
 ```sh
 npm ci
-npm run tsc
-npm run bundle
+npm run check
 npm start
 ```
 
@@ -573,12 +571,17 @@ Available scripts:
 
 | Script | Purpose |
 | --- | --- |
+| `npm run build` | Compile the library and create the minified bundle. |
 | `npm run tsc` | Compile `src/` to `dist/` and emit declarations. |
 | `npm run bundle` | Bundle and minify `dist/index.js` into `dist/index-min.js`. |
+| `npm test` | Compile the library and run the browser regression suite once. |
+| `npm run test:watch` | Run browser tests continuously while developing. |
+| `npm run test:coverage` | Run browser tests with an Istanbul coverage report. |
+| `npm run check` | Run the library build, demo compile, and browser tests. |
 | `npm start` | Serve and open `sample/index.html`. Run the build first. |
-| `npm run tsc-demo` | Compile the demo; currently requires the config fix noted above. |
+| `npm run tsc-demo` | Compile the demo application. |
 
-`prepublishOnly` runs the library compiler and bundle step. The generated
+`prepublishOnly` runs the complete library build. The generated
 `dist/` directory is excluded from Git but included in the npm package after a
 publish build.
 
@@ -587,9 +590,9 @@ publish build.
 The project is useful as a lightweight, understandable layer over browser
 primitives. The clearest next improvements are:
 
-1. add browser-based tests for lifecycle timing, attribute conversion, every
-   binding form, repeat cleanup, and event disposal;
-2. add CI for TypeScript, tests, package contents, and the demo;
+1. expand the initial browser regression suite to cover the remaining helpers,
+   HMR branches, malformed attributes, and multi-root repeat edge cases;
+2. add package-content assertions and cross-browser jobs to CI;
 3. define a smaller stable core and move HMR/declarative/utility features to
    explicit subpath exports;
 4. replace or isolate `eval()`-based bindings and provide a strict-CSP path;

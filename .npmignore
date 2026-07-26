@@ -1,8 +1,11 @@
 /node_modules
 /src
+/test
+/coverage
 /.vs
 /.github
 /sample
 tsconfig.json
+web-test-runner.config.mjs
 debug.log
 .editorconfig

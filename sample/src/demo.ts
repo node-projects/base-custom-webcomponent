@@ -15,10 +15,10 @@ export class AA extends BaseCustomWebComponentConstructorAppend {
     }`
 
     @property()
-    bb;
+    bb!: string;
 
     @property()
-    cc;
+    cc!: string;
 
     @property()
     dd = '<img src="aa.jpg">';
