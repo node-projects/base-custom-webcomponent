@@ -24,7 +24,7 @@
         "@web/test-runner": "^1.0.0",
         "esbuild": "^0.28.0",
         "polyfill-symbol-metadata": "^0.0.2",
-        "typescript": "^6.0.2"
+        "typescript": "^7.0.2"
     },
     "repository": {
         "type": "git",
