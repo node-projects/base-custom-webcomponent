@@ -5,6 +5,13 @@ function camelToDashCase(text: string) {
     return text.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`);
 }
 
+function getAdoptedStyles(element: Element) {
+    const styles = element.querySelectorAll<HTMLStyleElement>('style[type=adopted-css]');
+    return styles.length
+        ? Array.from(styles, style => cssFromString(style.textContent))
+        : null;
+}
+
 const instanceMap = new Map<string, WeakArray<BaseDeclaritiveWebcomponent>>();
 class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentNoAttachedTemplate {
     #firstConnect = false;
@@ -18,9 +25,9 @@ class BaseDeclaritiveWebcomponent extends BaseCustomWebComponentNoAttachedTempla
             this.#firstConnect = true;
             if (window[this.localName].template === undefined) {
                 window[this.localName].template = window[this.localName]._definingElement.querySelector('template');
-                const styles: HTMLStyleElement[] = window[this.localName]._definingElement.querySelectorAll('style[type=adopted-css]');
-                if (styles?.length)
-                    window[this.localName]._styles = Array.from(styles).map(x => cssFromString(x.textContent));
+                const styles = getAdoptedStyles(window[this.localName]._definingElement);
+                if (styles)
+                    window[this.localName]._styles = styles;
             }
             //@ts-ignore
             this._rootDocumentFragment = this.constructor.template.content.cloneNode(true);
@@ -89,18 +96,13 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
                     }
                 }
             } else {
-                props = this.properties.split(/[\s,;]+/).reduce((a, v) => ({ ...a, [v]: String }), {});
+                for (const propertyName of this.properties.split(/[\s,;]+/))
+                    props[propertyName] = String;
             }
         }
         const name = this.name;
-        if (window[name]) {
-            window[name].template = undefined;
-            window[name].properties = props;
-            window[name]._propertiesDictionary = null;
-            window[name]._enableBindings = this.enableBindings;
-            window[name]._definingElement = this;
-            window[name]._styles = null;
-        } else {
+        const isNewDefinition = !window[name];
+        if (isNewDefinition) {
             const instanceArray = new WeakArray<BaseDeclaritiveWebcomponent>();
             instanceMap.set(name, instanceArray);
             window[name] = function () {
@@ -108,6 +110,9 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
                 instanceArray.add(instance);
 
                 for (let p in props) {
+                    const propertyDefinition = props[p];
+                    const attributeName = propertyDefinition.attribute ?? camelToDashCase(p);
+                    const changeEventName = camelToDashCase(p) + '-changed';
                     Object.defineProperty(instance, p, {
                         get() {
                             return this['_' + p];
@@ -116,41 +121,45 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
                             if (this['_' + p] !== newValue) {
                                 this['_' + p] = newValue;
 
-                                if (props[p].reflect) {
-                                    if (props[p].type === Boolean) {
+                                if (propertyDefinition.reflect) {
+                                    if (propertyDefinition.type === Boolean) {
                                         if (newValue === true)
-                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), '');
+                                            this.setAttribute(attributeName, '');
                                         else
-                                            this.removeAttribute(props[p].attribute ?? camelToDashCase(p));
+                                            this.removeAttribute(attributeName);
                                     } else {
-                                        if (props[p].type === Object || props[p].type === Array)
-                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), JSON.stringify(newValue));
+                                        if (propertyDefinition.type === Object || propertyDefinition.type === Array)
+                                            this.setAttribute(attributeName, JSON.stringify(newValue));
                                         else
-                                            this.setAttribute(props[p].attribute ?? camelToDashCase(p), newValue);
+                                            this.setAttribute(attributeName, newValue);
                                     }
                                 }
                                 //@ts-ignore
                                 if (this.constructor._enableBindings)
                                     this._bindingsRefresh(p);
-                                instance.dispatchEvent(new CustomEvent(camelToDashCase(p) + '-changed', { detail: { newValue } }));
+                                instance.dispatchEvent(new CustomEvent(changeEventName, { detail: { newValue } }));
                             }
                         },
                         enumerable: true,
                         configurable: true,
                     });
-                    if (props[p].default) {
-                        instance['_' + p] = props[p].default;
+                    if (propertyDefinition.default) {
+                        instance['_' + p] = propertyDefinition.default;
                     }
                 }
                 return instance;
             }
+        }
 
-            //window[name].style = style;
-            window[name].properties = props;
-            window[name]._propertiesDictionary = null;
-            window[name]._enableBindings = this.enableBindings;
-            window[name]._definingElement = this;
-            window[name]._styles = null;
+        const elementConstructor = window[name];
+        elementConstructor.template = undefined;
+        elementConstructor.properties = props;
+        elementConstructor._propertiesDictionary = null;
+        elementConstructor._enableBindings = this.enableBindings;
+        elementConstructor._definingElement = this;
+        elementConstructor._styles = null;
+
+        if (isNewDefinition) {
             window[name].prototype = Object.create(BaseDeclaritiveWebcomponent.prototype, { constructor: { value: window[name] } })
             if (!customElements.get(name))
                 customElements.define(name, window[name]);
@@ -159,9 +168,9 @@ class DeclaritiveBaseCustomWebcomponent extends BaseCustomWebComponentNoAttached
 
     upgradeAllInstances(template?: HTMLTemplateElement) {
         window[this.name].template = template ?? this.querySelector('template');
-        const styles = this.querySelectorAll('style[type=adopted-css]');
-        if (styles?.length)
-            window[this.name]._styles = Array.from(styles).map(x => cssFromString(x.textContent));
+        const styles = getAdoptedStyles(this);
+        if (styles)
+            window[this.name]._styles = styles;
         const instanceArray = instanceMap.get(this.name);
         for (const i of instanceArray)
             i._reapplyTemplateAfterUpdate();

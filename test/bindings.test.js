@@ -302,4 +302,76 @@ describe('binding engine', () => {
         );
         equal(element._bindings.length, initialBindingCount, 'replacement must dispose the removed instance bindings');
     });
+
+    it('reconciles duplicate identities in occurrence order without recreating nodes', async () => {
+        class DuplicateRepeatElement extends BaseCustomWebComponentConstructorAppend {
+            static template = html`
+                <template repeat:item="[[this.items]]">
+                    <span class="row">[[index + ':' + item.label]]</span>
+                </template>
+            `;
+
+            shared = { label: 'shared' };
+            other = { label: 'other' };
+            items = [this.shared, this.shared, this.other];
+
+            ready() {
+                this._bindingsParse();
+            }
+        }
+
+        customElements.define('bcw-duplicate-repeat', DuplicateRepeatElement);
+
+        const element = document.createElement('bcw-duplicate-repeat');
+        await nextMicrotask();
+
+        const initialRows = Array.from(element.shadowRoot.querySelectorAll('.row'));
+        deepEqual(initialRows.map(row => row.textContent), ['0:shared', '1:shared', '2:other']);
+
+        element.items = [element.shared, element.other, element.shared];
+        element._bindingsRefresh('items');
+
+        const reorderedRows = Array.from(element.shadowRoot.querySelectorAll('.row'));
+        equal(reorderedRows[0], initialRows[0], 'the first duplicate keeps the first available instance');
+        equal(reorderedRows[1], initialRows[2], 'the distinct identity moves between duplicates');
+        equal(reorderedRows[2], initialRows[1], 'the second duplicate keeps the second available instance');
+        deepEqual(reorderedRows.map(row => row.textContent), ['0:shared', '1:other', '2:shared']);
+    });
+
+    it('does not refresh repeat bindings disposed earlier in the same refresh', async () => {
+        let removedLabelReads = 0;
+        const removed = {
+            get label() {
+                removedLabelReads++;
+                return 'removed';
+            },
+        };
+
+        class DisposedBindingElement extends BaseCustomWebComponentConstructorAppend {
+            static template = html`
+                <template repeat:item="[[this.items]]">
+                    <span class="row">[[item.label]]</span>
+                </template>
+            `;
+
+            retained = { label: 'retained' };
+            items = [removed, this.retained];
+
+            ready() {
+                this._bindingsParse();
+            }
+        }
+
+        customElements.define('bcw-disposed-repeat-binding', DisposedBindingElement);
+
+        const element = document.createElement('bcw-disposed-repeat-binding');
+        await nextMicrotask();
+        equal(removedLabelReads, 1);
+
+        element.items = [element.retained];
+        element._bindingsRefresh('items');
+
+        equal(removedLabelReads, 1, 'a detached repeat binding must not run from the refresh snapshot');
+        equal(element.shadowRoot.querySelector('.row').textContent, 'retained');
+    });
 });

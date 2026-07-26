@@ -87,4 +87,40 @@ describe('declarative custom elements', () => {
         equal(element.subtitle, 'Secondary');
         equal(element.shadowRoot.querySelector('slot') !== null, true);
     });
+
+    it('reuses the registered constructor when a definition is replaced', async () => {
+        const firstContainer = document.createElement('div');
+        firstContainer.innerHTML = `
+            <node-projects-dce name="bcw-redefined-element" properties="title">
+                <template><p id="first">First template</p></template>
+            </node-projects-dce>
+        `;
+        document.body.append(firstContainer);
+
+        const firstInstance = document.createElement('bcw-redefined-element');
+        firstInstance.setAttribute('title', 'Existing');
+        document.body.append(firstInstance);
+        await nextMicrotask();
+        equal(firstInstance.shadowRoot.getElementById('first').textContent, 'First template');
+
+        const registeredConstructor = customElements.get('bcw-redefined-element');
+        const secondContainer = document.createElement('div');
+        secondContainer.innerHTML = `
+            <node-projects-dce name="bcw-redefined-element" properties="title">
+                <template><p id="second">Second template</p></template>
+            </node-projects-dce>
+        `;
+        document.body.append(secondContainer);
+
+        const secondInstance = document.createElement('bcw-redefined-element');
+        secondInstance.setAttribute('title', 'New');
+        document.body.append(secondInstance);
+        await nextMicrotask();
+
+        equal(customElements.get('bcw-redefined-element'), registeredConstructor);
+        equal(secondInstance.shadowRoot.getElementById('second').textContent, 'Second template');
+
+        secondContainer.querySelector('node-projects-dce').upgradeAllInstances();
+        equal(firstInstance.shadowRoot.getElementById('second').textContent, 'Second template');
+    });
 });

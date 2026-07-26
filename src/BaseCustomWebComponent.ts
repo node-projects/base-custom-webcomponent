@@ -62,7 +62,25 @@ type repeatBindingInstance = {
     repeatBindingItems: repeatBindingItem[],
 };
 
-let _bindingRegex = /\[\[.*?\]\]/g;
+const _bindingRegex = /\[\[.*?\]\]/g;
+const _dashToCamelCaseRegex = /-([a-z])/g;
+
+function dashToCamelCase(value: string) {
+    return value.replace(_dashToCamelCaseRegex, match => match[1].toUpperCase());
+}
+
+function unwrapBindingExpression(value: string) {
+    return value.substring(2, value.length - 2).replaceAll('&amp;', '&');
+}
+
+function runOneTimeSetupAndReady(component: any) {
+    if (component.oneTimeSetup && !component.constructor._oneTimeSetup) {
+        component.constructor._oneTimeSetup = true;
+        component.oneTimeSetup();
+    }
+    if (component.ready)
+        component.ready();
+}
 
 export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     static readonly style: CSSStyleSheet | Promise<CSSStyleSheet> | CSSStyleSheet[];
@@ -73,6 +91,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     protected _rootDocumentFragment: DocumentFragment;
     protected _initialPropertyCache = new Map<string, any>();
     protected _noWarningOnBindingErrors;
+    private _bindingsVersion = 0;
 
     protected _getDomElement<T extends Element>(id: string): T {
         if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
@@ -99,9 +118,9 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         else {
                             let sNm = a.name.substr(1);
                             if (sNm[0] === '@') {
-                                sNm = sNm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                                sNm = dashToCamelCase(sNm);
                             }
-                            let nm = sNm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            let nm = dashToCamelCase(sNm);
                             if (node[nm] instanceof TypedEvent) {
                                 (<TypedEvent<any>>node[nm]).on(this[a.value].bind(this));
                             } else {
@@ -187,11 +206,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _registerBinding(binding: bindingFunction, expression: string, repeatBindingItems?: repeatBindingItem[]) {
         this._bindings.push([binding, this._getBindingProperties(expression, repeatBindingItems), repeatBindingItems]);
+        this._bindingsVersion++;
     }
 
     private _bindingsInternalParse(startNode: Node, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any, useSignals = false) {
-        if (!this._bindings)
+        if (!this._bindings) {
             this._bindings = [];
+            this._bindingsVersion++;
+        }
         if (!startNode)
             startNode = this.shadowRoot.childNodes.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
 
@@ -210,26 +232,26 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                 for (let a of attributes) {
                     if (a.value[0] === '[' && a.value[1] === '[' && a.value[a.value.length - 1] === ']' && a.value[a.value.length - 2] === ']') {
                         if (a.name.startsWith('css:')) {
-                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                            const camelCased = a.name.substring(4, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            const value = unwrapBindingExpression(a.value);
+                            const camelCased = dashToCamelCase(a.name.substring(4, a.name.length));
                             const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
                             this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('class:')) {
-                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                            const camelCased = a.name.substring(6, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            const value = unwrapBindingExpression(a.value);
+                            const camelCased = dashToCamelCase(a.name.substring(6, a.name.length));
                             const b = () => this._bindingSetElementClass(<HTMLElement | SVGElement>node, camelCased, value, repeatBindingItems, host, context);
                             this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('bcw:')) {
                             if (a.name === 'bcw:visible') {
-                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                                const value = unwrapBindingExpression(a.value);
                                 const display = node.style.display;
                                 const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'display', value + "?'" + display + "':'none'", repeatBindingItems, host, context);
                                 this._registerBinding(b, value, repeatBindingItems);
                                 b();
                             } else if (a.name === 'bcw:text') {
-                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                                const value = unwrapBindingExpression(a.value);
                                 const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, 'textContent', value, repeatBindingItems, removeAttributes, host, context, false, onlyWhenChanged);
                                 this._registerBinding(b, value, repeatBindingItems);
                                 b(true, false);
@@ -238,14 +260,14 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
                             //do nothing
                         } else if (a.name === 'if' && node instanceof HTMLTemplateElement) {
-                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const value = unwrapBindingExpression(a.value);
                             const elementsCache: Node[] = [];
                             const b = () => this._bindingConditional(<HTMLTemplateElement>node, value, repeatBindingItems, elementsCache, host, context);
                             this._registerBinding(b, value, repeatBindingItems);
                             b();
                         } else if (a.name.startsWith('repeat:')) {
-                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
-                            const bindingItemVariableName = a.name.substring(7, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                            const value = unwrapBindingExpression(a.value);
+                            const bindingItemVariableName = dashToCamelCase(a.name.substring(7, a.name.length));
                             const instances: repeatBindingInstance[] = [];
                             let bindingIndexname = 'index';
                             let changeItemCallback = null;
@@ -261,10 +283,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         } else if (a.name[0] === '@') { //todo remove events on repeat refresh
                             let nm;
                             if (a.name[1] === '@')
-                                nm = a.name.substring(2, a.name.length).replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                                nm = dashToCamelCase(a.name.substring(2, a.name.length));
                             else
                                 nm = a.name.substring(1, a.name.length);
-                            const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            const value = unwrapBindingExpression(a.value);
                             if (a.name == "@touch:contextmenu")
                                 addTouchFriendlyContextMenu(node, (e) => this._bindingRunEval(value, repeatBindingItems, e, host, context, node));
                             else {
@@ -275,10 +297,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 }
                             }
                         } else {
-                            let value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                            let value = unwrapBindingExpression(a.value);
                             let camelCased = a.name
                             if (a.name[0] !== '$' && a.name[0] !== '?')
-                                camelCased = a.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                                camelCased = dashToCamelCase(a.name);
                             let noNull = false;
                             if (value[0] === '?') {
                                 value = value.substring(1);
@@ -297,7 +319,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         let event = (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? (nm === 'checked' ? 'change' : 'input') : (node instanceof HTMLSelectElement ? 'change' : nm + '-changed');
                         if (attributeValues.length > 1 && attributeValues[1])
                             event = attributeValues[1];
-                        const camelCased = nm.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                        const camelCased = dashToCamelCase(nm);
                         let noNull = false;
                         if (value[0] === '?') {
                             value = value.substring(1);
@@ -506,14 +528,20 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                     : "this." + callback)
                 : null;
             const sourceProperties = this._getBindingProperties(expression, repeatBindingItems);
-            const availableInstances = new Map<any, repeatBindingInstance[]>();
+            const availableInstances = new Map<any, {
+                instances: repeatBindingInstance[],
+                nextIndex: number,
+            }>();
             for (const instance of instances) {
                 let available = availableInstances.get(instance.value);
                 if (!available) {
-                    available = [];
+                    available = {
+                        instances: [],
+                        nextIndex: 0,
+                    };
                     availableInstances.set(instance.value, available);
                 }
-                available.push(instance);
+                available.instances.push(instance);
             }
 
             if (!this._repeatBindings)
@@ -523,7 +551,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             for (let index = 0; index < values.length; index++) {
                 const value = values[index];
                 const available = availableInstances.get(value);
-                let instance = available?.shift();
+                const instanceIndex = available?.nextIndex ?? 0;
+                let instance = available?.instances[instanceIndex];
+                if (instance)
+                    available.nextIndex++;
 
                 if (instance) {
                     instance.value = value;
@@ -577,7 +608,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             }
 
             for (const available of availableInstances.values()) {
-                for (const instance of available) {
+                for (let instanceIndex = available.nextIndex; instanceIndex < available.instances.length; instanceIndex++) {
+                    const instance = available.instances[instanceIndex];
                     if (callbackExpression) {
                         const callbackItems = instance.repeatBindingItems.slice();
                         callbackItems.push({ name: 'nodes', item: instance.nodes });
@@ -593,8 +625,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         }
                     }
                     for (let bindingIndex = this._bindings.length - 1; bindingIndex >= 0; bindingIndex--) {
-                        if (ownerItem && this._bindings[bindingIndex][2]?.includes(ownerItem))
+                        if (ownerItem && this._bindings[bindingIndex][2]?.includes(ownerItem)) {
                             this._bindings.splice(bindingIndex, 1);
+                            this._bindingsVersion++;
+                        }
                     }
                     for (const repeatedNode of instance.nodes)
                         repeatedNode.parentNode?.removeChild(repeatedNode);
@@ -709,10 +743,19 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             rootProperty = rootProperty.split(/[.\[]/, 1)[0];
 
         // Bindings can add or remove nested registrations while they run.
-        // Iterate a snapshot, but skip registrations removed by an earlier
-        // repeat/conditional update in the same refresh.
-        for (const registration of this._bindings.slice()) {
-            if (!this._bindings.includes(registration))
+        // Iterate the original snapshot and rebuild the constant-time liveness
+        // lookup only when a binding callback changes the registration set.
+        const registrations = this._bindings.slice();
+        let bindingsVersion = -1;
+        let bindingsLength = -1;
+        let activeBindings: Set<bindingRegistration>;
+        for (const registration of registrations) {
+            if (bindingsVersion !== this._bindingsVersion || bindingsLength !== this._bindings.length) {
+                activeBindings = new Set(this._bindings);
+                bindingsVersion = this._bindingsVersion;
+                bindingsLength = this._bindings.length;
+            }
+            if (!activeBindings.has(registration))
                 continue;
             const properties = registration[1];
             if (rootProperty && properties !== null && !properties.includes(rootProperty))
@@ -897,17 +940,7 @@ export class BaseCustomWebComponentLazyAppend extends BaseCustomWebComponentNoAt
         queueMicrotask(() => {
             if (this._rootDocumentFragment)
                 this.shadowRoot.appendChild(this._rootDocumentFragment);
-            //@ts-ignore
-            if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
-                //@ts-ignore
-                this.constructor._oneTimeSetup = true;
-                //@ts-ignore
-                this.oneTimeSetup();
-            }
-            //@ts-ignore
-            if (this.ready)
-                //@ts-ignore
-                this.ready();
+            runOneTimeSetupAndReady(this);
         })
     }
 }
@@ -916,19 +949,7 @@ export class BaseCustomWebComponentConstructorAppend extends BaseCustomWebCompon
     constructor(template?: HTMLTemplateElement, style?: CSSStyleSheet, useImportNode: boolean = false) {
         super(template, style);
 
-        queueMicrotask(() => {
-            //@ts-ignore
-            if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
-                //@ts-ignore
-                this.constructor._oneTimeSetup = true;
-                //@ts-ignore
-                this.oneTimeSetup();
-            }
-            //@ts-ignore
-            if (this.ready)
-                //@ts-ignore
-                this.ready();
-        });
+        queueMicrotask(() => runOneTimeSetupAndReady(this));
 
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
@@ -982,18 +1003,6 @@ export class BaseCustomWebComponentConstructorAppendLazyReady extends BaseCustom
         if (this._rootDocumentFragment)
             this.shadowRoot.appendChild(this._rootDocumentFragment);
 
-        requestAnimationFrame(() => {
-            //@ts-ignore
-            if (this.oneTimeSetup && !this.constructor._oneTimeSetup) {
-                //@ts-ignore
-                this.constructor._oneTimeSetup = true;
-                //@ts-ignore
-                this.oneTimeSetup();
-            }
-            //@ts-ignore
-            if (this.ready)
-                //@ts-ignore
-                this.ready();
-        });
+        requestAnimationFrame(() => runOneTimeSetupAndReady(this));
     }
 }
