@@ -1,279 +1,606 @@
 # base-custom-webcomponent
 
-## Description
+A small, dependency-free foundation for authoring native Web Components in
+TypeScript. It provides Shadow DOM setup, reusable HTML and CSS template tags,
+typed attribute parsing, lifecycle helpers, event wiring, optional Polymer-style
+bindings, declarative custom elements, and development-time hot replacement.
 
-The base-custom-webcomponent is a simple base class for the use of webcomponents in typescript. It wraps the needed basic functionality and also allows you to optionally use some advanced technics like
-- set attribute into property 
-- two-way binding
+> [!IMPORTANT]
+> Binding expressions are evaluated as JavaScript and text bindings write to
+> `innerHTML`. Treat component templates and bound HTML as trusted application
+> code. Do not place user-controlled strings in binding expressions or bind
+> untrusted HTML. Expression bindings also require a Content Security Policy
+> that permits `unsafe-eval`.
 
-## Basic Feature
-The base class does:
-- registers the html tag
-- creates the shadow dom
-- imports the css and html into the shadow dom
-- gives access to the dom elements with helping functions
-- informs about startup 
-  - oneTimeSetup()
-  - ready()
+## At a glance
 
-## Planed features
+- Native custom elements and open Shadow DOM
+- Constructable stylesheets via `css`
+- Reusable templates via `html`
+- String, number, boolean, object, and array attribute conversion
+- Named and expression-based event bindings
+- One-way and two-way data bindings
+- Conditional and repeated templates
+- Five lifecycle/timing variants
+- No runtime npm dependencies
+- Optional declarative component definitions and hot replacement
 
-Automatic Change Notification class fields via decorators are planed, but lack browser support at the moment: https://github.com/lit/lit/issues/2284
-For now we removed the this._createObservableProperties(); cause it would not work if you compile to newer javascript.
+The complete API and binding grammar are documented in the
+[HTML specification](./docs/specification.html).
 
-Refresh Bindings - only for the changed value.
-At the moment the call refreshes all bindings, but this could (and should) be optimized.
+## Installation
 
-## Advanced Features
-
-All the features are not enabled by default for performance reasons but you can call these methods to enable them. 
- - this._restoreCachedInititalValues(); ==> Needs to be called after super() of the constructor, to restore properties set, before element is upgraded. And also it needs to be called after the default values are set in constructor.
- - this._parseAttributesToProperties(); ==> parses all attributes to the defined properties
- - this._assignEvents(); ==> parses @event bindings to callbacks in class
- - this._bindingsParse(); ==> parses and enables bindings
- - this._bindingsrefresh(); ==> Updates Bindings after change of bound Values
-
-## Hot Reload
-
-The Library supports Hotreload of Components created with it. This works mostly for the Templates and the Styles, for Javascript, it depends. Best is, if you try it yourself.
-
-To use it, try following snippet:
-
+```sh
+npm install @node-projects/base-custom-webcomponent
 ```
+
+The package is ESM-only:
+
+```ts
+import {
+  BaseCustomWebComponentConstructorAppend,
+  css,
+  html,
+} from '@node-projects/base-custom-webcomponent';
+```
+
+## Quick start
+
+This example deliberately uses the static `properties` map. It works without
+TypeScript's legacy decorator mode.
+
+```ts
+import {
+  BaseCustomWebComponentConstructorAppend,
+  css,
+  html,
+} from '@node-projects/base-custom-webcomponent';
+
+export class CounterCard extends BaseCustomWebComponentConstructorAppend {
+  static readonly is = 'counter-card';
+
+  static readonly properties = {
+    count: Number,
+    label: String,
+    disabled: Boolean,
+  };
+
+  static readonly template = html`
+    <article>
+      <span class:muted="[[this.disabled]]">
+        [[this.label]]: [[this.count]]
+      </span>
+      <button @click="increment" ?disabled="[[this.disabled]]">
+        Add one
+      </button>
+    </article>
+  `;
+
+  static readonly style = css`
+    :host {
+      display: block;
+      font: 14px/1.5 system-ui, sans-serif;
+    }
+
+    article {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .muted {
+      opacity: 0.55;
+    }
+  `;
+
+  count = 0;
+  label = 'Count';
+  disabled = false;
+
+  constructor() {
+    super();
+
+    // Restore values assigned before the custom element was upgraded.
+    // Call this after field defaults have been initialized.
+    this._restoreCachedInititalValues();
+  }
+
+  ready(): void {
+    this._parseAttributesToProperties();
+    this._assignEvents();
+    this._bindingsParse();
+  }
+
+  increment(): void {
+    this.count += 1;
+    this._bindingsRefresh();
+  }
+}
+
+customElements.define(CounterCard.is, CounterCard);
+```
+
+```html
+<counter-card count="2" label="Items"></counter-card>
+```
+
+### What happens during construction
+
+`BaseCustomWebComponentConstructorAppend`:
+
+1. creates or adopts an open, serializable Shadow Root;
+2. clones `static template`;
+3. adopts `static style`;
+4. appends the cloned template immediately; and
+5. schedules `oneTimeSetup()` and `ready()` in a microtask.
+
+The advanced features are opt-in. Call `_parseAttributesToProperties()`,
+`_assignEvents()`, and `_bindingsParse()` only when the component needs them.
+
+## Templates and styles
+
+### `html`
+
+`html` returns an `HTMLTemplateElement`.
+
+```ts
+static readonly template = html`
+  <slot></slot>
+  <button id="save">Save</button>
+`;
+```
+
+Interpolated values are converted to strings and inserted into the template
+source. They are not escaped:
+
+```ts
+const heading = 'Settings';
+const template = html`<h2>${heading}</h2>`;
+```
+
+Use interpolation only with trusted, author-controlled values. Prefer bindings
+for per-instance data.
+
+`htmlFromString(value)` is available when the template starts as a string and
+has the same trust requirement.
+
+### `css`
+
+`css` creates a constructable `CSSStyleSheet` with `replaceSync()`:
+
+```ts
+static readonly style = css`
+  :host {
+    display: block;
+  }
+`;
+```
+
+The base class accepts one stylesheet, an array of stylesheets, or a promise
+that resolves to a stylesheet through the class-level `style` member.
+`cssFromString(value)` converts a string, stylesheet, or CSS-module-style
+`{ default: CSSStyleSheet }` value.
+
+## Declaring properties
+
+Property declarations tell `_parseAttributesToProperties()` how to convert
+attributes. They do not make fields reactive and do not create
+`observedAttributes`.
+
+```ts
+static readonly properties = {
+  title: String,
+  page: Number,
+  active: Boolean,
+  options: Object,
+  items: Array,
+};
+```
+
+| Declared type | Attribute behavior |
+| --- | --- |
+| `String` | The attribute value is assigned unchanged. |
+| `Number` | Parsed with `parseFloat()`. |
+| `Boolean` | Presence means `true`; absence is not processed. |
+| `Object` | Parsed with `JSON.parse()`. |
+| `Array` | Parsed with `JSON.parse()`. |
+
+Property names map from camel case to dash case. For example,
+`pageSize` reads from `page-size`.
+
+Attribute parsing is a snapshot operation. Call
+`_parseAttributesToProperties()` again if attributes were changed later, or
+implement the platform's `observedAttributes` and `attributeChangedCallback`
+in the component.
+
+### Legacy `@property()` decorator
+
+The library still supports TypeScript's legacy experimental decorator emit:
+
+```ts
+import { property } from '@node-projects/base-custom-webcomponent';
+
+@property(Number)
+count = 0;
+```
+
+This requires `"experimentalDecorators": true`. Standard ECMAScript decorators
+are detected but currently throw `new decorators not yet supported! (need work)`.
+The decorator records property metadata only; it does not automatically refresh
+bindings. Complex decorator options are present in the type surface, but the
+base class currently uses only the property's type during attribute parsing.
+
+For new components, prefer the explicit static `properties` map until standard
+decorator support is complete.
+
+## Lifecycle variants
+
+Choose the timing model intentionally:
+
+| Base class | Template append | `ready()` timing | `oneTimeSetup()` |
+| --- | --- | --- | --- |
+| `BaseCustomWebComponentNoAttachedTemplate` | Never | Never | Never |
+| `BaseCustomWebComponentConstructorAppend` | Synchronously in the constructor | Next microtask | Once per subclass, next microtask |
+| `BaseCustomWebComponentLazyAppend` | Next microtask | After the append in that microtask | Once per subclass |
+| `BaseCustomWebComponentConnectedReady` | Synchronously in the constructor | First connection | Not called |
+| `BaseCustomWebComponentLazyAppendConnectedReady` | Next microtask | First connection | Not called |
+| `BaseCustomWebComponentConstructorAppendLazyReady` | Synchronously in the constructor | Next animation frame | Once per subclass |
+
+`ready()` is a library hook, not a browser lifecycle callback. The constructor
+variants may call it before the element is connected. Use a connected variant
+when connection to a document is required.
+
+`oneTimeSetup()` is called once per subclass, not once per instance.
+
+### Waiting for child definitions
+
+```ts
+async ready(): Promise<void> {
+  await this._waitForChildrenReady();
+  // Undefined custom elements currently present in this Shadow Root are now
+  // registered. This does not wait for their custom ready() methods.
+}
+```
+
+## DOM helpers
+
+Inside a subclass:
+
+```ts
+const save = this._getDomElement<HTMLButtonElement>('save');
+const rows = this._getDomElements<HTMLElement>('[data-row]');
+```
+
+`_getDomElement()` searches by ID and `_getDomElements()` uses
+`querySelectorAll()`. The latter returns a plain array type in the public API,
+although the implementation currently casts the browser's `NodeList`.
+
+The exported `DomHelper` class also provides traversal, child removal, index,
+host, and ancestor helpers that can cross open Shadow Roots.
+
+## Event bindings
+
+### Named handlers
+
+```ts
+static readonly template = html`
+  <button @click="save">Save</button>
+`;
+
+ready(): void {
+  this._assignEvents();
+}
+
+save(event: MouseEvent): void {
+  // ...
+}
+```
+
+`_assignEvents()` scans the Shadow Root recursively and binds methods to native
+DOM events. If a matching element property is a `TypedEvent`, it subscribes
+with `TypedEvent.on()` instead.
+
+### Expression handlers
+
+Expression handlers are parsed by `_bindingsParse()`:
+
+```html
+<button @click="[[this.select(item, event, sender)]]">Select</button>
+```
+
+The special variables are:
+
+- `event`: the dispatched event;
+- `sender`: the element that owns the binding;
+- repeat variables such as `item` and `index`; and
+- any values supplied through the optional binding context.
+
+Expression handlers execute with `eval()`. Use them only in trusted templates.
+Prefer named handlers where possible because they are easier to type, test, and
+use with a strict Content Security Policy.
+
+### Touch-friendly context menus
+
+```html
+<div @touch:contextmenu="openMenu"></div>
+```
+
+`addTouchFriendlyContextMenu()` combines the native `contextmenu` event with a
+500 ms touch hold. A matching `removeTouchFriendlyContextMenu()` helper is
+exported.
+
+## Binding grammar
+
+Bindings are optional. Activate them with `_bindingsParse()` and refresh them
+after state changes with `_bindingsRefresh()`.
+
+### One-way bindings
+
+```html
+<span>[[this.message]]</span>
+<input .value="[[this.message]]">
+<a $aria-label="[[this.message]]"></a>
+<button ?disabled="[[this.busy]]">Save</button>
+```
+
+| Form | Target |
+| --- | --- |
+| `name="[[expression]]"` | The camel-cased DOM property. |
+| `.name="[[expression]]"` | The DOM property, while making intent explicit. |
+| `$name="[[expression]]"` | A string attribute; falsey values remove it. |
+| `?name="[[expression]]"` | A boolean attribute; truthy adds it. |
+| Text `[[expression]]` | `innerHTML` of the generated binding container. |
+
+Prefix an expression with `?` to convert `null`, `undefined`, and other falsey
+values to an empty string:
+
+```html
+<span>[[?this.optionalText]]</span>
+```
+
+### Two-way bindings
+
+```html
+<input .value="{{this.name}}">
+<input .checked="{{this.enabled::change}}">
+<textarea .value="{{this.notes::change;paste}}"></textarea>
+```
+
+Default events are:
+
+- `input` for text inputs and textareas;
+- `change` for checkboxes and selects; and
+- `<property>-changed` for other elements.
+
+Override the event list after `::`, separating multiple events with semicolons.
+The event listener reads the target property or attribute and writes the value
+back to the bound path.
+
+### CSS, class, and visibility
+
+```html
+<div css:background-color="[[this.accent]]"></div>
+<div class:selected="[[this.selected]]"></div>
+<section bcw:visible="[[this.open]]"></section>
+```
+
+`bcw:visible` switches the inline `display` value between its initial value and
+`none`.
+
+### Conditional templates
+
+```html
+<template if="[[this.hasResults]]">
+  <p>Results are available.</p>
+</template>
+```
+
+When the expression becomes truthy, the template content is cloned and parsed
+for nested bindings. When it becomes falsey, the cloned top-level elements are
+removed.
+
+### Repeated templates
+
+```html
+<template
+  repeat:item="[[this.items]]"
+  repeat-index="itemIndex"
+  repeat-changed-item-callback="[[this.itemChanged(item, nodes, callbackType)]]"
+>
+  <button @click="[[this.select(item)]]">
+    [[itemIndex + 1]]. [[item.label]]
+  </button>
+</template>
+```
+
+- `repeat:item` names the value variable.
+- `index` is the default index variable.
+- `repeat-index` changes the index variable name.
+- `nodes` contains the cloned top-level elements.
+- `callbackType` is `"create"` or `"remove"`.
+
+Any iterable is accepted and converted to an array. A changed collection is
+currently redrawn rather than keyed or incrementally reconciled.
+
+### Refresh behavior
+
+```ts
+this.message = 'Saved';
+this._bindingsRefresh();
+```
+
+The optional `property` argument is currently not used to filter work, so every
+registered binding is evaluated on each refresh. `onlyWhenChanged` can prevent
+some redundant assignments but does not prevent expression evaluation.
+
+## Declarative custom elements
+
+Importing the package registers `<node-projects-dce>`. It can define a custom
+element without a JavaScript subclass:
+
+```html
+<node-projects-dce
+  name="status-pill"
+  enable-bindings
+  properties='{
+    "label": "String",
+    "active": {
+      "type": "Boolean",
+      "reflect": true,
+      "default": false
+    }
+  }'
+>
+  <template>
+    <span class:active="[[this.active]]">[[this.label]]</span>
+  </template>
+
+  <style type="adopted-css">
+    :host { display: inline-block; }
+    .active { color: seagreen; }
+  </style>
+</node-projects-dce>
+
+<status-pill label="Online" active></status-pill>
+```
+
+Call `upgradeAllInstances()` on the defining `<node-projects-dce>` element after
+changing its template or adopted styles. Declarative definitions use globals on
+`window`, so custom element names must be unique and trusted.
+
+> [!NOTE]
+> `DeclaritiveBaseCustomWebcomponent` is misspelled in the existing module and
+> filenames for compatibility. The declarative element itself is
+> `<node-projects-dce>`.
+
+## Hot module replacement
+
+```ts
+import { HotModuleReplacement } from '@node-projects/base-custom-webcomponent';
+
 HotModuleReplacement.initHMR(async () => {
-    ...
-    replace this with a function wich returns a list of your changed files, 
-    or null if no files have changed since the last call, this function will be called every 100ms
-    so this function for example could ask the dev server wich files have changed, and return them.
-    The hotmodulereplacment will then try to reload them (If possible)
-    ...
+  const response = await fetch('/changed-files');
+  return response.ok ? response.json() : null;
 });
 ```
 
-## Bindings
+The callback is polled every 100 ms by default and returns changed JavaScript
+or CSS module URLs. HMR is development-only. It replaces template/style state
+and patches class members in place; complex module graphs and component state
+may still require a full reload.
 
-The Bindings are heavily inspired by polymer
+## Utility exports
 
-use [[expression]] for one way bindings
+| Export | Purpose |
+| --- | --- |
+| `TypedEvent<T>` | Typed subscribe/emit event helper with `on`, `once`, `single`, `off`, and `pipe`. |
+| `PropertyChangedArgs<T>` | Carries `newValue` and `oldValue`. |
+| `WeakArray<T>` | Iterable weak collection built from `WeakRef` and `FinalizationRegistry`. |
+| `DomHelper` | DOM and open-Shadow-DOM traversal helpers. |
+| `LazyLoader` | Loads scripts or text resources. |
+| `debounce` | Leading or trailing debounce helper. |
+| `addTouchFriendlyContextMenu` | Adds context-menu and long-press behavior. |
+| `removeTouchFriendlyContextMenu` | Removes touch-friendly context-menu behavior. |
+| `HotModuleReplacement` | Development-time JavaScript and CSS replacement. |
 
-use {{this.property::change;paste}} for two way bindings which listens to events 'change 'and 'paste'
+## Browser and toolchain requirements
 
-bcw:visible="[[bool-expression]]" to bind set css visiblity to visible when expression is true
+The library targets ES2023 and modern evergreen browsers. Its core path relies
+on:
 
-css:cssPropertyName="[[expression]]" to bind to a css property
+- Custom Elements, Shadow DOM, templates, and ES modules;
+- constructable `CSSStyleSheet` and `adoptedStyleSheets`;
+- `queueMicrotask()` and `requestAnimationFrame()`; and
+- `WeakRef` and `FinalizationRegistry` when `WeakArray` or HMR are used.
 
-class:className="[[boolExpression]]" to set/remove a css class
+Constructable stylesheets have been broadly available across current engines
+since 2023, so Safari and Firefox no longer require the polyfill mentioned in
+older versions of this README. Serializable Shadow Roots are newer (Baseline
+2024); test older supported browsers if serialization matters.
 
-$attribute="[[expression]]" to bind to Attributes instead of properties.
+Useful compatibility references:
 
-?booleanAttribute="[[expression]]" to bind to a boolean Attribute.
+- [Web Components on MDN](https://developer.mozilla.org/docs/Web/API/Web_components)
+- [`CSSStyleSheet.replaceSync()` on MDN](https://developer.mozilla.org/docs/Web/API/CSSStyleSheet/replaceSync)
+- [`ShadowRoot.serializable` on MDN](https://developer.mozilla.org/docs/Web/API/ShadowRoot/serializable)
+- [TypeScript legacy decorators](https://www.typescriptlang.org/tsconfig/experimentalDecorators.html)
 
-.property="[[expression]]" to bind to Proertys without using the attribute name (to disable side effects).
+No browser polyfills are bundled.
 
-[[$this.aa]] insert a property as parsed node. (the $ at the start)
+## Security and CSP
 
-sub <template></template> elements are not bound, so elements like <iron-list> of polymer also work
+The binding engine is intentionally powerful and intentionally trusted:
 
-css type adopted-css
+- expressions and expression event handlers use direct `eval()`;
+- text bindings write values as HTML;
+- `html` and `htmlFromString` assign to `template.innerHTML`; and
+- declarative components can execute expressions from markup.
 
-use repeat:nameOfItem="[[enumerableExpression]]" on a template element to repeat it for every instance of the enumerable.
-You could also use 'index' variable in the repeat binding for the current number. The attribute "repeat-index" could be used to change the name of the index variable.
-on a repeat you could use the repeat-changed-item-callback="[[this.itemCreated(item, nodes)]]
-!!caution!! => the repeat binding is only a preview at the moment, it redraws all items on array change
+Consequences:
 
-use if="[[expression]]" an a template element to show it conditionally
+1. Never build templates or expressions from untrusted data.
+2. Sanitize any HTML value before binding it.
+3. Do not enable declarative component definitions for user-authored markup.
+4. A strict CSP without `unsafe-eval` is incompatible with expression bindings.
+5. Named event handlers and manual DOM updates avoid most of these constraints.
 
-## Event Code Bindings
+The base class, static templates/styles, attribute parsing, DOM helpers, and
+named event wiring can be used without the expression binding engine.
 
-with for example @click="[[this.aa(event)]]" you could create a event binding wich could run any javascript code inside of the brackets.
-use @@ if you want to replace - with uppercase in event-names (example: @@my-click -> myClick is the event name)
+## Known limitations
 
-you can use the special props 'event' wich is the event, and 'sender' wich is the element sending the event.
+- Bindings are manually refreshed and all bindings rerun on each refresh.
+- Repeats redraw changed collections and do not use keys.
+- Expression bindings are not compatible with strict `script-src` CSP.
+- Standard ECMAScript decorators are not implemented.
+- Property declarations do not observe later attribute changes.
+- `ready()` timing varies by base class and is not a platform callback.
+- HMR is experimental and intended only for development.
+- The current repository has no automated test suite or CI workflow.
+- `npm run tsc-demo` needs a TypeScript 6 configuration update
+  (`rootDir` and modern module resolution); the library build itself passes.
 
+## Development
 
-### Binding extensions
-
- - Null/Undefined Extension {{? }} - If you start a binding with a questionmark (like this: {{?), the value of the binding is assigned as an empty string when null or undefined.
- - Invert extension {{! }} - If you use "!" on the start of a Binding, the bool value is inverted, and also asigned inverted (not yet developed, will do if needed)   
-
-## Declaritive Custom Element
-
-With the node-projects-dce element you could create a custom elment declaritively, see:
-
-Sample:
-
-    <node-projects-dce name="simple-dce-demo" properties='{"list":"Array", "list2":"Array", "ctx":{"type":"String","reflect":true}}' enable-bindings >
-        <template>
-            <style>h1 {color: red}</style>
-            <h1>Hello World</h1>
-            <div style="border: solid 3px black">Ctx: [[this.ctx]]</div>
-            <template repeat:myitem="[[this.list]]">
-                <button>[[myitem.toUpperCase()]] - <b>[[myitem.toLowerCase()]]</b> - [[index]]</button>
-                <ul>
-                <template repeat:myitem2="[[this.list2]]" repeat-index="inneridx">
-                    <button @click="[[this.ctx = myitem2]]" >[[myitem.toUpperCase()]] - <b>[[myitem2.toLowerCase()]]</b> - [[inneridx * 100]]</button>
-                </template>
-                </ul>
-            </template>
-        </template>
-    </node-projects-dce>
-    <simple-dce-demo list='["aa","bb","cc"]' list2='["hello", "you"]' ctx="TestCtx" style="position:absolute;left:184px;top:-53px;"></simple-dce-demo>
-
-## Developing
-
-  * Install dependencies
-```
-  $ npm install
-```
-
-  * Compile Typescript after doing changes
-```
-  $ npm run build
-```
-
-## Dependencies
-
-none on chrome.
-
-construct-style-sheets-polyfill on safari and firefox 
-
-## Using
-
-Simple Example Class in Typescript
-
-```
-import { BaseCustomWebComponentConstructorAppend, html } from '@node-projects/base-custom-webcomponent';
-
-@customElement('test-element')
-export class TestElement extends BaseCustomWebComponentConstructorAppend {
-
-    static readonly style = css`
-        `;
-
-    static readonly template = html`
-            <div id='root'>
-                <div css:background="[[this.bprp ? 'red' : 'green']]">[[this.info]]</div>
-                <template repeat:item="[[this.list]]">
-                    <div>[[item]]</div><br>
-                </template>
-            </div>
-            <button @click="buttonClick">click me</button>
-        `;
-    
-    @property()
-    list = ['aa', 'bb'];
-    @property()
-    info = 'hallo';
-    @property()
-    bprp = false;
-
-    constructor() {
-        super();
-        this._restoreCachedInititalValues();
-    }
-
-    async ready() {
-        this._root = this._getDomElement<HTMLDivElement>('root');
-        this._parseAttributesToProperties();
-        this._bindingsParse();
-        this._assignEvents();
-
-        setTimeout(() => {
-            this.info = 'wie gehts?';
-            brpp = true;
-        }, 5000)
-    }
-
-    buttonClick() {
-        alert('hallo');
-    }
-}
-
+```sh
+npm ci
+npm run tsc
+npm run bundle
+npm start
 ```
 
-## Online Sample
+Available scripts:
 
-https://codesandbox.io/p/sandbox/wkopk
+| Script | Purpose |
+| --- | --- |
+| `npm run tsc` | Compile `src/` to `dist/` and emit declarations. |
+| `npm run bundle` | Bundle and minify `dist/index.js` into `dist/index-min.js`. |
+| `npm start` | Serve and open `sample/index.html`. Run the build first. |
+| `npm run tsc-demo` | Compile the demo; currently requires the config fix noted above. |
 
-or here a repo
+`prepublishOnly` runs the library compiler and bundle step. The generated
+`dist/` directory is excluded from Git but included in the npm package after a
+publish build.
 
-https://github.com/node-projects/base-custom-webcomponent-sample
+## Project status and direction
 
-## ready method
-The ready method will be called, when the component is connected the first time. Be aware, that there is no information about the child components. They could be still not ready. When you need to interact with child componets, then use the method _waitForChildrenReady.
+The project is useful as a lightweight, understandable layer over browser
+primitives. The clearest next improvements are:
 
-```
-  public async ready(): Promise<void> {
-          await this._waitForChildrenReady();
-          // now all children are ready!
-          
-          const myChild = this._getDomElement<CustomAutoCompleteBoxComponent>('XYZ');
-  
-```
+1. add browser-based tests for lifecycle timing, attribute conversion, every
+   binding form, repeat cleanup, and event disposal;
+2. add CI for TypeScript, tests, package contents, and the demo;
+3. define a smaller stable core and move HMR/declarative/utility features to
+   explicit subpath exports;
+4. replace or isolate `eval()`-based bindings and provide a strict-CSP path;
+5. implement standard decorators or formally keep the static property map as
+   the supported API;
+6. enable stricter TypeScript options and remove the remaining `any` and
+   `@ts-ignore` debt; and
+7. align npm and JSR metadata, including versions and export maps.
 
-## VS Code Snippet
+See [ideas.md](./ideas.md) for additional experimental directions.
 
-![vscode-snippet-bcwc_3](https://github.com/node-projects/base-custom-webcomponent/assets/62056776/fe2f9003-5e07-41ba-b8b9-2eea7f42c01f)
+## License
 
-### How to use?
-
-* Open VS Code
-* Press "STRG" + "Shift" + "P"
-* Type "Snippets"
-
-![image](https://github.com/node-projects/base-custom-webcomponent/assets/62056776/e91183e4-5662-4645-af2c-d1f9dc81ab18)
-
-* Select Configure User Snippets
-* Select New Global Snippet File ...
-* Type in name: basecustomwebcomponent
-* Insert follwing code:
-
-  ```
-    {
-    	"basecustomwebcomponent": {
-            "prefix": "bcwc",
-            "body": [
-                "import { BaseCustomWebComponentConstructorAppend, html, css } from '@node-projects/base-custom-webcomponent';\n",
-                "export class ${1:${TM_FILENAME_BASE}} extends BaseCustomWebComponentConstructorAppend {\n",
-                "\tstatic readonly template = html`",
-                "\t\t",
-                "\t`;\n",
-                "\tstatic readonly style = css`",
-                "\t\t:host {",
-                "\t\t\tdisplay: block;",
-                "\t\t\tbox-sizing: border-box;",
-                "\t\t}",
-                "\t\t:host([hidden]) {",
-                "\t\t\tdisplay: none;",
-                "\t\t}",
-                "\t`;\n",
-                "\tstatic readonly is = '${1/(^[A-Z])|(?<=[a-z0-9A-Z])([A-Z])/${1:/downcase}${2:+-}${2:/downcase}/g}';\n",
-                "\tstatic readonly properties = {",
-                "\t\t\t",
-                "\t}\n",
-                "\tconstructor() {",
-                "\t\tsuper();",
-                "\t\tsuper._restoreCachedInititalValues();",
-                "\t}\n",
-                "\tready() {",
-                "\t\tthis._parseAttributesToProperties();",
-                "\t\tthis._assignEvents();",
-                "\t}",
-                "}",
-                "customElements.define(${1}.is, ${1})",
-            ],
-            "description": "Sample template for the BaseCustomWebComponent"
-        }
-    }
-  ```
-* Save and type "bcwc" and press tap inside an empty file
-* Press tap after you entered the classname
-
-## Articles 
-
-https://medium.com/@jochenkhner/a-idea-for-a-base-class-for-web-components-in-2020-b68e0fdf7bca
-
-## Size
-
-The Size of the Base Component is around 25k as ts/js code, 10k minimized and 2.2k brotly compressed.
-
+[BSD 3-Clause](./LICENSE)
