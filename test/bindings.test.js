@@ -64,6 +64,47 @@ describe('binding engine', () => {
         equal(get('visibility').style.display, 'none');
     });
 
+    it('renders explicit text bindings without interpreting markup', async () => {
+        class SafeTextBindingElement extends BaseCustomWebComponentConstructorAppend {
+            static template = html`
+                <div id="prefixed">[[text:this.content]]</div>
+                <div id="directive" bcw:text="[[this.content]]">
+                    <strong>placeholder</strong>
+                </div>
+                <div id="legacy">[[this.content]]</div>
+                <div id="mixed">Before [[text:this.content]] after</div>
+            `;
+
+            content = '<strong data-bound="yes">initial</strong>';
+
+            ready() {
+                this._bindingsParse();
+            }
+        }
+
+        customElements.define('bcw-safe-text-binding', SafeTextBindingElement);
+
+        const element = document.createElement('bcw-safe-text-binding');
+        await nextMicrotask();
+
+        const get = id => element.shadowRoot.getElementById(id);
+        equal(get('prefixed').textContent, '<strong data-bound="yes">initial</strong>');
+        equal(get('prefixed').querySelector('strong'), null);
+        equal(get('directive').textContent, '<strong data-bound="yes">initial</strong>');
+        equal(get('directive').querySelector('strong'), null);
+        equal(get('legacy').querySelector('strong').textContent, 'initial');
+        equal(get('mixed').textContent, 'Before <strong data-bound="yes">initial</strong> after');
+        equal(get('mixed').querySelector('strong'), null);
+
+        element.content = '<em>updated</em>';
+        element._bindingsRefresh('content');
+
+        equal(get('prefixed').textContent, '<em>updated</em>');
+        equal(get('directive').textContent, '<em>updated</em>');
+        equal(get('legacy').querySelector('em').textContent, 'updated');
+        equal(get('mixed').textContent, 'Before <em>updated</em> after');
+    });
+
     it('writes values back through a two-way property binding', async () => {
         class TwoWayElement extends BaseCustomWebComponentConstructorAppend {
             static template = html`

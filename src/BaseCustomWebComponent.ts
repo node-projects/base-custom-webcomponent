@@ -206,6 +206,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
             let node = loopNode;
             if (node.nodeType === 1) { //node.nodeType === 1
                 const attributes = Array.from(node.attributes);
+                let skipChildren = false;
                 for (let a of attributes) {
                     if (a.value[0] === '[' && a.value[1] === '[' && a.value[a.value.length - 1] === ']' && a.value[a.value.length - 2] === ']') {
                         if (a.name.startsWith('css:')) {
@@ -227,6 +228,12 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                                 const b = () => this._bindingSetElementCssValue(<HTMLElement | SVGElement>node, 'display', value + "?'" + display + "':'none'", repeatBindingItems, host, context);
                                 this._registerBinding(b, value, repeatBindingItems);
                                 b();
+                            } else if (a.name === 'bcw:text') {
+                                const value = a.value.substring(2, a.value.length - 2).replaceAll('&amp;', '&');
+                                const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, a, 'textContent', value, repeatBindingItems, removeAttributes, host, context, false, onlyWhenChanged);
+                                this._registerBinding(b, value, repeatBindingItems);
+                                b(true, false);
+                                skipChildren = true;
                             }
                         } else if (a.name.length === 28 && a.name === 'repeat-changed-item-callback') {
                             //do nothing
@@ -309,6 +316,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
                         }
                     }
                 }
+                if (skipChildren)
+                    currNode = this._bindingNextNodeAfterSubtree(walker, node, startNode);
             } else if (node.nodeType === 3) {
                 if (node.nodeValue.indexOf('[[') >= 0) {
                     const text = node.nodeValue;
@@ -346,6 +355,18 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
         }
     }
 
+    private _bindingNextNodeAfterSubtree(walker: TreeWalker, node: Node, startNode: Node): Node {
+        walker.currentNode = node;
+        let nextNode = walker.nextSibling();
+        while (!nextNode && walker.currentNode !== startNode) {
+            const parent = walker.parentNode();
+            if (!parent || parent === startNode)
+                return null;
+            nextNode = walker.nextSibling();
+        }
+        return nextNode;
+    }
+
     private _getNodeValue(valueType: string | '$' | '?', node: Node, propertyName: string, attributeName: string) {
         if (valueType === '?')
             return (<HTMLElement>node).hasAttribute(attributeName)
@@ -356,12 +377,17 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     private _textFragmentBinding(node: Node, m: RegExpMatchArray, repeatBindingItems: repeatBindingItem[], removeAttributes: boolean, host: any, context: any) {
         let value = m[0].substr(2, m[0].length - 4);
+        let property = 'innerHTML';
+        if (value.startsWith('text:')) {
+            value = value.substring(5);
+            property = 'textContent';
+        }
         let noNull = false;
         if (value[0] === '?') {
             value = value.substring(1);
             noNull = true;
         }
-        const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, null, 'innerHTML', value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
+        const b = (firstRun?: boolean, onlyWhenChanged?: boolean) => this._bindingSetNodeValue(firstRun, node, null, property, value, repeatBindingItems, removeAttributes, host, context, noNull, onlyWhenChanged);
         this._registerBinding(b, value, repeatBindingItems);
         b(true, false);
     }

@@ -6,11 +6,11 @@ typed attribute parsing, lifecycle helpers, event wiring, optional Polymer-style
 bindings, declarative custom elements, and development-time hot replacement.
 
 > [!IMPORTANT]
-> Binding expressions are evaluated as JavaScript and text bindings write to
-> `innerHTML`. Treat component templates and bound HTML as trusted application
-> code. Do not place user-controlled strings in binding expressions or bind
-> untrusted HTML. Expression bindings also require a Content Security Policy
-> that permits `unsafe-eval`.
+> Binding expressions are evaluated as JavaScript. Unprefixed text bindings
+> write to `innerHTML`; use `[[text:expression]]` or `bcw:text` for values that
+> must be rendered literally. Treat component templates and intentionally bound
+> HTML as trusted application code. Expression bindings also require a Content
+> Security Policy that permits `unsafe-eval`.
 
 ## At a glance
 
@@ -339,6 +339,8 @@ to refresh only expressions that can depend on it.
 
 ```html
 <span>[[this.message]]</span>
+<span>[[text:this.untrustedMessage]]</span>
+<span bcw:text="[[this.untrustedMessage]]"></span>
 <input .value="[[this.message]]">
 <a $aria-label="[[this.message]]"></a>
 <button ?disabled="[[this.busy]]">Save</button>
@@ -351,13 +353,22 @@ to refresh only expressions that can depend on it.
 | `$name="[[expression]]"` | A string attribute; falsey values remove it. |
 | `?name="[[expression]]"` | A boolean attribute; truthy adds it. |
 | Text `[[expression]]` | `innerHTML` of the generated binding container. |
+| Text `[[text:expression]]` | Safe literal text through `textContent`. |
+| `bcw:text="[[expression]]"` | Replace an element's contents with safe literal text. |
 
 Prefix an expression with `?` to convert `null`, `undefined`, and other falsey
 values to an empty string:
 
 ```html
 <span>[[?this.optionalText]]</span>
+<span>[[text:?this.optionalText]]</span>
 ```
+
+Prefer the `text:` prefix for inline interpolation and `bcw:text` when the
+element itself is the binding target. Both render characters such as `<`, `>`,
+and `&` literally and never parse the result as markup. The prefix is scoped to
+text-node interpolation; other binding targets continue to use their documented
+property or attribute behavior.
 
 ### Two-way bindings
 
@@ -383,10 +394,11 @@ back to the bound path.
 <div css:background-color="[[this.accent]]"></div>
 <div class:selected="[[this.selected]]"></div>
 <section bcw:visible="[[this.open]]"></section>
+<output bcw:text="[[this.status]]"></output>
 ```
 
 `bcw:visible` switches the inline `display` value between its initial value and
-`none`.
+`none`. `bcw:text` replaces the element's contents through `textContent`.
 
 ### Conditional templates
 
@@ -548,14 +560,16 @@ No browser polyfills are bundled.
 The binding engine is intentionally powerful and intentionally trusted:
 
 - expressions and expression event handlers use direct `eval()`;
-- text bindings write values as HTML;
+- unprefixed text bindings write values as HTML;
+- `[[text:expression]]` and `bcw:text` write literal text through `textContent`;
 - `html` and `htmlFromString` assign to `template.innerHTML`; and
 - declarative components can execute expressions from markup.
 
 Consequences:
 
 1. Never build templates or expressions from untrusted data.
-2. Sanitize any HTML value before binding it.
+2. Prefer explicit text bindings for user-controlled strings; sanitize values
+   that intentionally use an HTML-bearing target.
 3. Do not enable declarative component definitions for user-authored markup.
 4. A strict CSP without `unsafe-eval` is incompatible with expression bindings.
 5. Named event handlers and manual DOM updates avoid most of these constraints.

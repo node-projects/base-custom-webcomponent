@@ -818,9 +818,11 @@
             <span class="card-number">C / TRUST</span>
             <h3>Application templates</h3>
             <p>
-              The expression language runs JavaScript and text bindings can
-              insert HTML. Templates are trusted program source, not a sandbox
-              for untrusted markup.
+              The expression language runs JavaScript. Unprefixed text bindings
+              can insert HTML; explicit <code>text:</code> and
+              <code>bcw:text</code> bindings render values literally.
+              Templates remain trusted program source, not a sandbox for
+              untrusted expressions.
             </p>
           </article>
         </div>
@@ -1201,8 +1203,26 @@ setStatus(status: string): void {
               <td>Write to generated container <code>innerHTML</code></td>
               <td><code>&lt;b&gt;[[this.label]]&lt;/b&gt;</code></td>
             </tr>
+            <tr>
+              <td><code>[[text:expr]]</code> in text</td>
+              <td>Write literal text through <code>textContent</code></td>
+              <td><code>[[text:this.message]]</code></td>
+            </tr>
+            <tr>
+              <td><code>bcw:text="[[expr]]"</code></td>
+              <td>Replace the owning element's contents with literal text</td>
+              <td><code>&lt;output bcw:text="[[this.status]]"&gt;&lt;/output&gt;</code></td>
+            </tr>
           </tbody>
         </table>
+        <p>
+          The <code>text:</code> prefix applies only to text-node
+          interpolation. It removes the prefix before evaluating the expression
+          and assigns the result to <code>textContent</code>, so markup-like
+          characters are displayed rather than parsed. Use
+          <code>[[text:?expr]]</code> to retain the optional-value behavior that
+          converts falsey results to an empty string.
+        </p>
 
         <h3>Two-way targets</h3>
         <div class="code-block">
@@ -1238,6 +1258,10 @@ setStatus(status: string): void {
             <tr>
               <td><code>bcw:visible="[[expr]]"</code></td>
               <td>Restores the initial inline display value or applies <code>none</code>.</td>
+            </tr>
+            <tr>
+              <td><code>bcw:text="[[expr]]"</code></td>
+              <td>Replaces all child content by assigning the result to <code>textContent</code>.</td>
             </tr>
           </tbody>
         </table>
@@ -1591,7 +1615,7 @@ setStatus(status: string): void {
               <li><code>[[...]]</code> and <code>{{...}}</code> expressions</li>
               <li>Expression event handlers</li>
               <li>Two-way paths with bracket expressions</li>
-              <li>Text bindings that insert HTML</li>
+              <li>Unprefixed text bindings that insert HTML</li>
               <li>Markup-defined declarative components</li>
             </ul>
           </article>
@@ -1599,9 +1623,11 @@ setStatus(status: string): void {
 
         <div class="callout danger">
           <strong>Application requirement</strong>
-          Sanitize any HTML-bearing value before binding it, keep templates out
-          of user control, and do not enable expression parsing when deployment
-          policy requires a CSP without <code>unsafe-eval</code>.
+          Prefer <code>[[text:...]]</code> or <code>bcw:text</code> for
+          user-controlled strings. Sanitize any intentionally HTML-bearing
+          value, keep expressions out of user control, and do not enable
+          expression parsing when deployment policy requires a CSP without
+          <code>unsafe-eval</code>.
         </div>
       </section>
 
