@@ -59,6 +59,10 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
     protected _initialPropertyCache = new Map<string, any>();
     protected _noWarningOnBindingErrors;
 
+    // remembered so hot module replacement can redo the root parse/assign after a template swap
+    protected _bindingsParseOptions: [removeAttributes: boolean, host: any, context: any, useSignals: boolean];
+    protected _eventsAssigned: boolean;
+
     protected _getDomElement<T extends Element>(id: string): T {
         if (this.shadowRoot.children.length > 1 || (this.shadowRoot.children[0] !== undefined && this.shadowRoot.children[0].localName !== 'style'))
             return <T>(<any>this.shadowRoot.getElementById(id));
@@ -73,6 +77,7 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
 
     protected _assignEvents(node?: Node) {
         if (!node) {
+            this._eventsAssigned = true;
             node = this.shadowRoot.children.length > 0 ? this.shadowRoot : this._rootDocumentFragment;
         }
         if (node instanceof Element) {
@@ -126,6 +131,8 @@ export class BaseCustomWebComponentNoAttachedTemplate extends HTMLElement {
      * 
      */
     protected _bindingsParse(node?: Node, removeAttributes = false, host: any = null, context: any = null, useSignals = false) {
+        if (!node)
+            this._bindingsParseOptions = [removeAttributes, host, context, useSignals];
         this._bindingsInternalParse(node, null, removeAttributes, host, context, useSignals);
     }
 
