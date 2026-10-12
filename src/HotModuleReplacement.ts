@@ -55,9 +55,10 @@ class HmrToggle extends HTMLElement {
 
     constructor() {
         super();
-        this.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;';
+        // positioning lives in :host, setting attributes (like style) in the constructor is not allowed
         const root = this.attachShadow({ mode: 'open' });
         root.innerHTML = `<style>
+            :host { position: fixed; right: 12px; bottom: 12px; z-index: 2147483647; }
             button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px;
                      font: 12px system-ui, sans-serif; color: #fff; background: #333; border-radius: 16px; opacity: .85;
                      box-shadow: 0 2px 6px rgba(0,0,0,.35); }
