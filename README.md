@@ -512,8 +512,20 @@ HotModuleReplacement.initHMR(async () => {
 });
 ```
 
-The callback is polled every 100 ms by default and returns changed JavaScript
-or CSS module URLs. HMR is development-only. It replaces template/style state
+HMR defaults to off. Enable it and optionally show a floating switch:
+
+```ts
+HotModuleReplacement.enabled = true; // also setEnabled() or toggle()
+HotModuleReplacement.showToggle();
+```
+
+The state is stored in `localStorage`. The URL parameters `?hmr=on` and
+`?hmr=off` override and persist that state. While disabled, polling stops;
+component instances remain tracked so HMR can be enabled without reloading.
+
+When enabled, the callback is polled every 100 ms by default and returns changed
+JavaScript or CSS module paths. These must be page-absolute paths, such as
+`/dist/my-component.js`. HMR is development-only. It replaces template/style state
 and patches class members in place; complex module graphs and component state
 may still require a full reload.
 

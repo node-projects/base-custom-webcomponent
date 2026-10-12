@@ -217,7 +217,7 @@ describe('exported utilities', () => {
         equal(unsupportedError.message, 'new decorators not yet supported! (need work)');
     });
 
-    it('classifies function shapes and routes changed file types for HMR', () => {
+    it('classifies function shapes and routes changed file types for HMR', async () => {
         class ExampleClass {}
         function exampleFunction() {}
         const arrow = () => {};
@@ -233,11 +233,17 @@ describe('exported utilities', () => {
         const originalReloadCss = HotModuleReplacement.reloadCss;
         const originalReloadJs = HotModuleReplacement.reloadJs;
         const originalWarn = console.warn;
+        const originalEnabled = HotModuleReplacement.enabled;
         HotModuleReplacement.reloadCss = file => reloaded.push(`css:${file}`);
         HotModuleReplacement.reloadJs = file => reloaded.push(`js:${file}`);
         console.warn = () => {};
         try {
-            HotModuleReplacement.assertChangedFiles([
+            HotModuleReplacement.setEnabled(false, false);
+            await HotModuleReplacement.assertChangedFiles(['/component.js']);
+            deepEqual(reloaded, []);
+
+            HotModuleReplacement.setEnabled(true, false);
+            await HotModuleReplacement.assertChangedFiles([
                 'theme.CSS',
                 'component.js',
                 'worker.mjs',
@@ -245,6 +251,7 @@ describe('exported utilities', () => {
                 'notes.txt',
             ]);
         } finally {
+            HotModuleReplacement.setEnabled(originalEnabled, false);
             HotModuleReplacement.reloadCss = originalReloadCss;
             HotModuleReplacement.reloadJs = originalReloadJs;
             console.warn = originalWarn;
