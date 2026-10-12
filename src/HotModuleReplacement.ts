@@ -43,6 +43,46 @@ function parseSwitch(value: string | null): boolean | null {
     }
 }
 
+const toggleTagName = 'node-projects-hmr-toggle';
+
+// Floating on/off switch, only listens for changes while it is in the document
+class HmrToggle extends HTMLElement {
+    private _button: HTMLButtonElement;
+    private _update = () => {
+        this.toggleAttribute('on', HotModuleReplacement.enabled);
+        this._button.setAttribute('aria-checked', String(HotModuleReplacement.enabled));
+    };
+
+    constructor() {
+        super();
+        this.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;';
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `<style>
+            button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px;
+                     font: 12px system-ui, sans-serif; color: #fff; background: #333; border-radius: 16px; opacity: .85;
+                     box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+            button:hover, button:focus-visible { opacity: 1; }
+            button:focus-visible { outline: 2px solid #e8590c; outline-offset: 2px; }
+            .track { width: 28px; height: 14px; border-radius: 7px; background: #777; position: relative; transition: background .15s; }
+            .knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: left .15s; }
+            :host([on]) .track { background: #e8590c; }
+            :host([on]) .knob { left: 16px; }
+        </style>
+        <button type="button" role="switch" title="Toggle hot module replacement"><span class="track"><span class="knob"></span></span>🔥 HMR</button>`;
+        this._button = root.querySelector('button');
+        this._button.addEventListener('click', () => HotModuleReplacement.toggle());
+    }
+
+    connectedCallback() {
+        window.addEventListener('hmr-enabled-changed', this._update);
+        this._update();
+    }
+
+    disconnectedCallback() {
+        window.removeEventListener('hmr-enabled-changed', this._update);
+    }
+}
+
 export class HotModuleReplacement {
 
     private static changesFetcher: () => Promise<string[]>;
@@ -102,28 +142,9 @@ export class HotModuleReplacement {
 
     /** Shows a small floating on/off switch (bottom right). Returns the element, so it can be removed again. */
     public static showToggle(): HTMLElement {
-        const host = document.createElement('div');
-        host.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;';
-        const root = host.attachShadow({ mode: 'open' });
-        root.innerHTML = `<style>
-            button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px;
-                     font: 12px system-ui, sans-serif; color: #fff; background: #333; border-radius: 16px; opacity: .85;
-                     box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-            button:hover { opacity: 1; }
-            .track { width: 28px; height: 14px; border-radius: 7px; background: #777; position: relative; transition: background .15s; }
-            .knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: left .15s; }
-            :host([on]) .track { background: #e8590c; }
-            :host([on]) .knob { left: 16px; }
-        </style>
-        <button type="button" role="switch" title="Toggle hot module replacement"><span class="track"><span class="knob"></span></span>🔥 HMR</button>`;
-        const button = root.querySelector('button');
-        const update = () => {
-            host.toggleAttribute('on', HotModuleReplacement.enabled);
-            button.setAttribute('aria-checked', String(HotModuleReplacement.enabled));
-        };
-        button.addEventListener('click', () => HotModuleReplacement.toggle());
-        window.addEventListener('hmr-enabled-changed', update);
-        update();
+        if (!customElements.get(toggleTagName))
+            customElements.define(toggleTagName, HmrToggle);
+        const host = document.createElement(toggleTagName);
         document.body.appendChild(host);
         return host;
     }
@@ -146,7 +167,8 @@ export class HotModuleReplacement {
 
     public static startPolling(interval = 100) {
         HotModuleReplacement.interval = interval;
-        HotModuleReplacement.schedule();
+        if (HotModuleReplacement.enabled)
+            HotModuleReplacement.schedule();
     }
 
     public static stopPolling() {
@@ -162,6 +184,8 @@ export class HotModuleReplacement {
     }
 
     private static async pollForChanges() {
+        if (!HotModuleReplacement.enabled)
+            return;
         try {
             const changes = await HotModuleReplacement.changesFetcher();
             // may have been switched off while waiting
@@ -276,12 +300,18 @@ export class HotModuleReplacement {
         return (Array.isArray(style) ? await Promise.all(style) : [style]);
     }
 
-    // Replaces the old sheets of the class with the new ones, at the same position
+    // Replaces the old sheets of the class with the new ones, at the same position.
+    // Without old class sheets the new ones go first, as the class style is adopted before any others.
     private static swapStyles(instance: any, oldSheets: CSSStyleSheet[], newSheets: CSSStyleSheet[]) {
-        const current: CSSStyleSheet[] = Array.from(instance.shadowRoot.adoptedStyleSheets);
-        const idx = current.findIndex(x => oldSheets.includes(x));
-        if (idx < 0)
+        if (!instance.shadowRoot || (!oldSheets.length && !newSheets.length))
             return;
+        const current: CSSStyleSheet[] = Array.from(instance.shadowRoot.adoptedStyleSheets);
+        let idx = 0;
+        if (oldSheets.length) {
+            idx = current.findIndex(x => oldSheets.includes(x));
+            if (idx < 0)
+                return;
+        }
         const rest = current.filter(x => !oldSheets.includes(x));
         rest.splice(idx, 0, ...newSheets);
         instance.shadowRoot.adoptedStyleSheets = rest;
@@ -324,6 +354,6 @@ export class HotModuleReplacement {
         const newCssModule = await import(url + "?reload=" + newId, { with: { type: 'css' } });
         const oldStylesheet: CSSStyleSheet = oldCssModule.default;
         const newStylesheet: CSSStyleSheet = newCssModule.default;
-        oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
+        await oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
     }
 }
