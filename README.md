@@ -50,6 +50,19 @@ HotModuleReplacement.initHMR(async () => {
 });
 ```
 
+Files returned by the function must be page-absolute paths (e.g. `/dist/my-component.js`).
+
+### On/Off switch
+
+No need to comment out the script anymore. The default is **off**. The state is stored in `localStorage`:
+
+```
+HotModuleReplacement.enabled = true;    // or setEnabled(), toggle()
+HotModuleReplacement.showToggle();      // adds a small floating switch to the page
+```
+
+Or use the url: `?hmr=on` / `?hmr=off` (is stored as well, so it survives the reloads). While off, nothing is polled; the components are still tracked, so switching on later works without a page reload.
+
 ## Bindings
 
 The Bindings are heavily inspired by polymer

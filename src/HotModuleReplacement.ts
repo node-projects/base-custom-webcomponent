@@ -12,11 +12,143 @@ export function getFunctionType(x) {
         : '';
 }
 
+const storageKey = 'node-projects-hmr';
+const urlParam = 'hmr';
+const skippedKeys = new Set<string | symbol>(['prototype', 'name', 'length', 'constructor']);
+
+// Makes target look like source (own keys only), including accessors and symbols.
+// Keys that no longer exist on source are removed from target.
+function patchObject(target: any, source: any) {
+    for (const key of Reflect.ownKeys(target)) {
+        if (skippedKeys.has(key) || Object.prototype.hasOwnProperty.call(source, key))
+            continue;
+        try { delete target[key]; } catch { /* non configurable, ignore */ }
+    }
+    for (const key of Reflect.ownKeys(source)) {
+        if (skippedKeys.has(key))
+            continue;
+        try {
+            Object.defineProperty(target, key, { ...Object.getOwnPropertyDescriptor(source, key), configurable: true });
+        } catch (err) {
+            console.error("🔥 Hot reload - error setting property '" + String(key) + "' of '" + target.name + "'", err);
+        }
+    }
+}
+
+function parseSwitch(value: string | null): boolean | null {
+    switch ((value ?? '').trim().toLowerCase()) {
+        case 'on': case 'true': case '1': return true;
+        case 'off': case 'false': case '0': return false;
+        default: return null;
+    }
+}
+
+const toggleTagName = 'node-projects-hmr-toggle';
+
+// Floating on/off switch, only listens for changes while it is in the document
+class HmrToggle extends HTMLElement {
+    private _button: HTMLButtonElement;
+    private _update = () => {
+        this.toggleAttribute('on', HotModuleReplacement.enabled);
+        this._button.setAttribute('aria-checked', String(HotModuleReplacement.enabled));
+    };
+
+    constructor() {
+        super();
+        // positioning lives in :host, setting attributes (like style) in the constructor is not allowed
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `<style>
+            :host { position: fixed; right: 12px; bottom: 12px; z-index: 2147483647; }
+            button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px;
+                     font: 12px system-ui, sans-serif; color: #fff; background: #333; border-radius: 16px; opacity: .85;
+                     box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+            button:hover, button:focus-visible { opacity: 1; }
+            button:focus-visible { outline: 2px solid #e8590c; outline-offset: 2px; }
+            .track { width: 28px; height: 14px; border-radius: 7px; background: #777; position: relative; transition: background .15s; }
+            .knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: left .15s; }
+            :host([on]) .track { background: #e8590c; }
+            :host([on]) .knob { left: 16px; }
+        </style>
+        <button type="button" role="switch" title="Toggle hot module replacement"><span class="track"><span class="knob"></span></span>🔥 HMR</button>`;
+        this._button = root.querySelector('button');
+        this._button.addEventListener('click', () => HotModuleReplacement.toggle());
+    }
+
+    connectedCallback() {
+        window.addEventListener('hmr-enabled-changed', this._update);
+        this._update();
+    }
+
+    disconnectedCallback() {
+        window.removeEventListener('hmr-enabled-changed', this._update);
+    }
+}
+
 export class HotModuleReplacement {
 
     private static changesFetcher: () => Promise<string[]>;
 
     private static instances: WeakRef<any>[] = [];
+
+    private static interval = 100;
+    private static timer: ReturnType<typeof setTimeout> = null;
+    private static _enabled: boolean = null;
+
+    /**
+     * Master switch. Persisted in localStorage and can be overridden with `?hmr=off` / `?hmr=on` in the url
+     * (the url value is persisted too). Defaults to off.
+     */
+    public static get enabled(): boolean {
+        if (HotModuleReplacement._enabled == null) {
+            let value: boolean = null;
+            try { value = parseSwitch(new URLSearchParams(location.search).get(urlParam)); } catch { /* no location */ }
+            if (value != null) {
+                HotModuleReplacement.persist(value);
+            } else {
+                try { value = parseSwitch(localStorage.getItem(storageKey)); } catch { /* storage not available */ }
+            }
+            HotModuleReplacement._enabled = value ?? false;
+        }
+        return HotModuleReplacement._enabled;
+    }
+
+    public static set enabled(value: boolean) {
+        HotModuleReplacement.setEnabled(value);
+    }
+
+    public static setEnabled(value: boolean, persist = true) {
+        if (value === HotModuleReplacement.enabled)
+            return;
+        HotModuleReplacement._enabled = value;
+        if (persist)
+            HotModuleReplacement.persist(value);
+        if (value) {
+            console.warn("🔥 Hot reload - enabled");
+            if (HotModuleReplacement.changesFetcher)
+                HotModuleReplacement.startPolling(HotModuleReplacement.interval);
+        } else {
+            console.warn("🔥 Hot reload - disabled");
+            HotModuleReplacement.stopPolling();
+        }
+        window.dispatchEvent(new CustomEvent('hmr-enabled-changed', { detail: value }));
+    }
+
+    public static toggle() {
+        HotModuleReplacement.setEnabled(!HotModuleReplacement.enabled);
+    }
+
+    private static persist(value: boolean) {
+        try { localStorage.setItem(storageKey, value ? 'on' : 'off'); } catch { /* storage not available */ }
+    }
+
+    /** Shows a small floating on/off switch (bottom right). Returns the element, so it can be removed again. */
+    public static showToggle(): HTMLElement {
+        if (!customElements.get(toggleTagName))
+            customElements.define(toggleTagName, HmrToggle);
+        const host = document.createElement(toggleTagName);
+        document.body.appendChild(host);
+        return host;
+    }
 
     public static enableHMR() {
         BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback = (i) => {
@@ -26,151 +158,203 @@ export class HotModuleReplacement {
 
     public static initHMR(fetchChangedFiles: () => Promise<string[]>) {
         HotModuleReplacement.changesFetcher = fetchChangedFiles;
-        BaseCustomWebComponentNoAttachedTemplate.instanceCreatedCallback = (i) => {
-            HotModuleReplacement.instances.push(new WeakRef(i));
-        }
-        HotModuleReplacement.startPolling();
+        HotModuleReplacement.enableHMR();
+        // Instances are tracked even when switched off, so switching on later still finds them
+        if (HotModuleReplacement.enabled)
+            HotModuleReplacement.startPolling();
+        else
+            console.warn("🔥 Hot reload - switched off (use ?hmr=on, HotModuleReplacement.enabled = true or showToggle())");
     }
 
     public static startPolling(interval = 100) {
-        setTimeout(() => {
-            HotModuleReplacement.pollForChanges(interval);
-        }, interval);
+        HotModuleReplacement.interval = interval;
+        if (HotModuleReplacement.enabled)
+            HotModuleReplacement.schedule();
     }
 
-    private static async pollForChanges(interval: number) {
-        let changes = await HotModuleReplacement.changesFetcher()
-        if (changes != null) {
-            HotModuleReplacement.assertChangedFiles(changes);
+    public static stopPolling() {
+        clearTimeout(HotModuleReplacement.timer);
+        HotModuleReplacement.timer = null;
+    }
+
+    private static schedule() {
+        clearTimeout(HotModuleReplacement.timer);
+        HotModuleReplacement.timer = setTimeout(() => {
+            HotModuleReplacement.pollForChanges();
+        }, HotModuleReplacement.interval);
+    }
+
+    private static async pollForChanges() {
+        if (!HotModuleReplacement.enabled)
+            return;
+        try {
+            const changes = await HotModuleReplacement.changesFetcher();
+            // may have been switched off while waiting
+            if (changes != null && HotModuleReplacement.enabled)
+                await HotModuleReplacement.assertChangedFiles(changes);
+        } catch (err) {
+            console.error("🔥 Hot reload - error while polling for changes", err);
         }
-        setTimeout(() => {
-            HotModuleReplacement.pollForChanges(interval);
-        }, interval);
+        if (HotModuleReplacement.enabled)
+            HotModuleReplacement.schedule();
     }
 
-    public static assertChangedFiles(changes: string[]) {
-        if (changes != null) {
+    public static async assertChangedFiles(changes: string[]) {
+        if (changes != null && HotModuleReplacement.enabled) {
             for (let file of changes) {
-                HotModuleReplacement.assertFileType(file);
+                try {
+                    await HotModuleReplacement.assertFileType(file);
+                } catch (err) {
+                    console.error("🔥 Hot reload - error reloading '" + file + "'", err);
+                }
             }
         }
     }
 
-    private static assertFileType(file: string) {
+    private static async assertFileType(file: string) {
         switch (file.trim().toLowerCase().split(".").pop()) {
             case "css":
                 console.warn("🔥 Hot reload - css: " + file);
-                HotModuleReplacement.reloadCss(file);
+                await HotModuleReplacement.reloadCss(file);
                 break;
             case "js":
             case "cjs":
             case "mjs":
                 console.warn("🔥 Hot reload - js: " + file);
-                HotModuleReplacement.reloadJs(file);
+                await HotModuleReplacement.reloadJs(file);
                 break;
             default:
                 break;
         }
     }
 
+    // import() inside a library resolves relative to the library file, so resolve against the page instead
+    private static resolve(file: string) {
+        return new URL(file, document.baseURI).href;
+    }
+
     static async reloadJs(file: string) {
-        let oldModule = await import(file);
+        const url = HotModuleReplacement.resolve(file);
+        const oldModule = await import(url);
 
-        let oldDefine = customElements.define
+        let newModule;
+        const oldDefine = customElements.define;
         customElements.define = () => null;
-        let newModule = await import(file + "?reload=" + new Date().getTime());
-        customElements.define = oldDefine;
-
-        for (let nameOfexport in newModule) {
-            const classExport = newModule[nameOfexport];
-            if (getFunctionType(classExport) == 'class') {
-                let oldConstructor = null;
-                let i = HotModuleReplacement.instances.length;
-                while (i--) {
-                    let instanceRef = HotModuleReplacement.instances[i];
-                    let instance = instanceRef.deref();
-                    if (instance) {
-                        if (classExport.name == instance.constructor.name) {
-                            if (instance._hmrCallback)
-                                instance._hmrCallback(classExport);
-                            else {
-                                let oldIdx = -1;
-                                oldConstructor = instance.constructor;
-                                if (instance.constructor.style) {
-                                    oldIdx = instance.shadowRoot.adoptedStyleSheets.indexOf(instance.constructor.style);
-                                    if (oldIdx >= 0) {
-                                        let newArr = Array.from(instance.shadowRoot.adoptedStyleSheets);
-                                        newArr.splice(oldIdx, 1);
-                                        instance.shadowRoot.adoptedStyleSheets = newArr;
-                                    }
-                                }
-                                if (classExport.style) {
-                                    if (oldIdx >= 0) {
-                                        let newArr = Array.from(instance.shadowRoot.adoptedStyleSheets);
-                                        //@ts-ignore
-                                        newArr.splice(oldIdx, 0, classExport.style);
-                                        instance.shadowRoot.adoptedStyleSheets = newArr;
-                                    }
-                                }
-                                if (instance._bindings) {
-                                    instance.constructor.template = classExport.template;
-                                    instance._rootDocumentFragment = document.importNode(instance.constructor.template.content, true);
-                                    instance.shadowRoot.innerHTML = '';
-                                    instance.shadowRoot.appendChild(instance._rootDocumentFragment);
-                                    instance._bindings = null;
-                                    instance._bindingsParse();
-                                }
-                            }
-                        }
-                    } else {
-                        HotModuleReplacement.instances.splice(i, 1);
-                    }
-                }
-
-                if (oldConstructor)
-                    oldConstructor.constructor.style = classExport.style;
-            }
+        try {
+            newModule = await import(url + "?reload=" + new Date().getTime());
+        } finally {
+            customElements.define = oldDefine;
         }
 
+        // Collect what changed before the old classes get patched in place
+        const updates: { oldExport: any, newExport: any, templateChanged: boolean, oldStyle: any }[] = [];
         for (let nameOfexport in oldModule) {
-            const oExport = oldModule[nameOfexport];
-            if (getFunctionType(oExport) == 'class') {
-                const newExport = newModule[nameOfexport];
-                if (newExport) {
-                    // Gets all attribute-properties of class
-                    let properties = Object.getOwnPropertyNames(oExport);
+            const oldExport = oldModule[nameOfexport];
+            const newExport = newModule[nameOfexport];
+            if (getFunctionType(oldExport) == 'class' && getFunctionType(newExport) == 'class') {
+                updates.push({
+                    oldExport,
+                    newExport,
+                    // pure js edits must not wipe the dom of the instances
+                    templateChanged: !!newExport.template && newExport.template.innerHTML !== oldExport.template?.innerHTML,
+                    oldStyle: oldExport.style
+                });
+            }
+        }
 
-                    for (let property of properties) {
-                        if (property == 'prototype' || property == 'name' || property == 'length') continue;
-                        delete oExport[property];
-                        try {
-                            oExport[property] = newExport[property];
-                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + oExport.name + "'", err); }
-                    }
+        // Patch the old classes in place, so existing and new instances use the new code
+        for (const u of updates) {
+            patchObject(u.oldExport, u.newExport);
+            patchObject(u.oldExport.prototype, u.newExport.prototype);
+        }
 
-                    properties = Object.getOwnPropertyNames(oExport.prototype);
-                    for (let property of properties) {
-                        if (property == 'prototype' || property == 'name' || property == 'length') continue;
-                        delete oExport[property];
-                        try {
-                            oExport.prototype[property] = newExport.prototype[property];
-                        } catch (err) { console.error("🔥 Hot reload - error setting property '" + property + "' of '" + oExport.name + "'", err); }
+        for (const u of updates) {
+            const oldSheets = await HotModuleReplacement.resolveStyles(u.oldStyle);
+            const newSheets = await HotModuleReplacement.resolveStyles(u.newExport.style);
+
+            let i = HotModuleReplacement.instances.length;
+            while (i--) {
+                const instance = HotModuleReplacement.instances[i].deref();
+                if (!instance) {
+                    HotModuleReplacement.instances.splice(i, 1);
+                } else if (instance.constructor === u.oldExport) {
+                    try {
+                        if (instance._hmrCallback) {
+                            instance._hmrCallback(u.newExport);
+                        } else {
+                            HotModuleReplacement.swapStyles(instance, oldSheets, newSheets);
+                            if (u.templateChanged && instance.shadowRoot)
+                                HotModuleReplacement.swapTemplate(instance, u.newExport.template);
+                        }
+                    } catch (err) {
+                        console.error("🔥 Hot reload - error updating instance of '" + u.oldExport.name + "'", err);
                     }
                 }
             }
         }
+    }
+
+    private static async resolveStyles(style: any): Promise<CSSStyleSheet[]> {
+        style = await style;
+        if (!style)
+            return [];
+        return (Array.isArray(style) ? await Promise.all(style) : [style]);
+    }
+
+    // Replaces the old sheets of the class with the new ones, at the same position.
+    // Without old class sheets the new ones go first, as the class style is adopted before any others.
+    private static swapStyles(instance: any, oldSheets: CSSStyleSheet[], newSheets: CSSStyleSheet[]) {
+        if (!instance.shadowRoot || (!oldSheets.length && !newSheets.length))
+            return;
+        const current: CSSStyleSheet[] = Array.from(instance.shadowRoot.adoptedStyleSheets);
+        let idx = 0;
+        if (oldSheets.length) {
+            idx = current.findIndex(x => oldSheets.includes(x));
+            if (idx < 0)
+                return;
+        }
+        const rest = current.filter(x => !oldSheets.includes(x));
+        rest.splice(idx, 0, ...newSheets);
+        instance.shadowRoot.adoptedStyleSheets = rest;
+    }
+
+    // Rebuilds the shadow dom from the new template, bindings and events are set up again with the original options.
+    // ready()/oneTimeSetup() are not run again, so element references cached there are stale until the next full reload.
+    private static swapTemplate(instance: any, template: HTMLTemplateElement) {
+        const parseOptions = instance._bindingsParseOptions;
+        const hadBindings = !!instance._bindings;
+        const hadEvents = instance._eventsAssigned;
+
+        // bindings are closures over the old dom, dropping them is all the disposal there is
+        instance._bindings = null;
+        instance._repeatBindings = null;
+
+        instance._rootDocumentFragment = document.importNode(template.content, true);
+        instance.shadowRoot.replaceChildren(instance._rootDocumentFragment);
+
+        if (parseOptions)
+            instance._bindingsParse(null, ...parseOptions);
+        else if (hadBindings)
+            instance._bindingsParse();
+        if (parseOptions || hadBindings)
+            instance._bindingsRefresh();
+        if (hadEvents)
+            instance._assignEvents();
     }
 
     // Change the url of the stylesheet to force a reload
     private static async reloadCss(file: string) {
+        const url = HotModuleReplacement.resolve(file);
         const newId = new Date().getTime();
-        for (let link of document.querySelectorAll<HTMLLinkElement>(`link[href*="${file}"]`))
-            link.href = link.href.split("?")[0] + "?reload=" + newId;
+        for (let link of document.querySelectorAll<HTMLLinkElement>('link[href]')) {
+            if (link.href.split("?")[0] == url.split("?")[0])
+                link.href = link.href.split("?")[0] + "?reload=" + newId;
+        }
 
-        const oldCssModule = await import(file, { with: { type: 'css' } });
-        const newCssModule = await import(file + "?reload=" + newId, { with: { type: 'css' } });
+        const oldCssModule = await import(url, { with: { type: 'css' } });
+        const newCssModule = await import(url + "?reload=" + newId, { with: { type: 'css' } });
         const oldStylesheet: CSSStyleSheet = oldCssModule.default;
         const newStylesheet: CSSStyleSheet = newCssModule.default;
-        oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
+        await oldStylesheet.replace(Array.from(newStylesheet.cssRules).map(rule => rule.cssText).join(''));
     }
-} 
+}
